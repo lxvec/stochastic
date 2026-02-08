@@ -548,9 +548,10 @@ class PartitionVisualizer {
             
             itemDiv.append('label')
                 .style('margin', '0')
-                .style('min-width', '40px')
+                .style('min-width', '140px')
                 .style('font-weight', '500')
-                .text(atom.label + ':');
+                .style('font-family', 'monospace')
+                .html('ω ∈ ' + atom.label + ' → X(ω) =');
             
             const input = itemDiv.append('input')
                 .attr('type', 'number')
@@ -559,7 +560,7 @@ class PartitionVisualizer {
                 .style('flex', '1')
                 .style('height', '32px')
                 .style('font-size', '13px')
-                .attr('placeholder', 'Enter price')
+                .attr('placeholder', 'Value')
                 .attr('value', this.randomVariableValues[index] || '');
             
             // Update random variable on input change
