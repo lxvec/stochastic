@@ -114,8 +114,21 @@ class PartitionVisualizer {
     }
     
     addVerticalLine(x) {
-        x = Math.round(x);
-        const snappedX = Math.round(x / 10) * 10;
+        // Find the largest interval between existing vertical lines and add line at its bisection
+        const xPoints = [0, ...this.verticalLines, this.boxWidth].sort((a, b) => a - b);
+        const uniqueX = [...new Set(xPoints)];
+        
+        let largestInterval = { start: 0, end: this.boxWidth, width: this.boxWidth };
+        for (let i = 0; i < uniqueX.length - 1; i++) {
+            const width = uniqueX[i + 1] - uniqueX[i];
+            if (width > largestInterval.width) {
+                largestInterval = { start: uniqueX[i], end: uniqueX[i + 1], width: width };
+            }
+        }
+        
+        // Add line at bisection of largest interval
+        const bisectionX = Math.round((largestInterval.start + largestInterval.end) / 2);
+        const snappedX = Math.round(bisectionX / 10) * 10;
         
         if (snappedX > 10 && snappedX < this.boxWidth - 10) {
             const exists = this.verticalLines.some(existingX => Math.abs(existingX - snappedX) < 30);
@@ -128,8 +141,21 @@ class PartitionVisualizer {
     }
     
     addHorizontalLine(y) {
-        y = Math.round(y);
-        const snappedY = Math.round(y / 10) * 10;
+        // Find the largest interval between existing horizontal lines and add line at its bisection
+        const yPoints = [0, ...this.horizontalLines, this.boxHeight].sort((a, b) => a - b);
+        const uniqueY = [...new Set(yPoints)];
+        
+        let largestInterval = { start: 0, end: this.boxHeight, height: this.boxHeight };
+        for (let i = 0; i < uniqueY.length - 1; i++) {
+            const height = uniqueY[i + 1] - uniqueY[i];
+            if (height > largestInterval.height) {
+                largestInterval = { start: uniqueY[i], end: uniqueY[i + 1], height: height };
+            }
+        }
+        
+        // Add line at bisection of largest interval
+        const bisectionY = Math.round((largestInterval.start + largestInterval.end) / 2);
+        const snappedY = Math.round(bisectionY / 10) * 10;
         
         if (snappedY > 10 && snappedY < this.boxHeight - 10) {
             const exists = this.horizontalLines.some(existingY => Math.abs(existingY - snappedY) < 30);
