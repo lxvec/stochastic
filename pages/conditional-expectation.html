@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conditional Expectation - Stochastic Visualizer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="../index.html">Stochastic Visualizer</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="partitions.html">Partitions</a></li>
+                    <li class="nav-item"><a class="nav-link" href="filtrations.html">Filtrations</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="conditional-expectation.html">Conditional Expectation</a></li>
+                    <li class="nav-item"><a class="nav-link" href="martingale.html">Martingale Properties</a></li>
+                    <li class="nav-item"><a class="nav-link" href="binomial-model.html">Binomial Model</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-5">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <h1 class="mb-3">Conditional Expectation E[X | F]</h1>
+                <p class="lead text-muted">
+                    The conditional expectation E[X | F] is the best prediction of X given the information in σ-algebra F.
+                    It is constant on atoms of F.
+                </p>
+
+                <!-- Interactive Visualization -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Partition & Random Variable X</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div id="visualization" style="border: 3px solid #333;"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <h6>Controls</h6>
+                                <button id="add-vertical-btn" class="btn btn-primary btn-sm w-100 mb-2">Add Vertical Partition</button>
+                                <button id="add-horizontal-btn" class="btn btn-primary btn-sm w-100 mb-3">Add Horizontal Partition</button>
+                                
+                                <h6 class="mt-3">Random Variable Values (X)</h6>
+                                <div id="random-variable-inputs" style="font-size: 13px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Conditional Expectation Display -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">Random Variable X</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="x-values" style="max-height: 250px; overflow-y: auto;">
+                                    <div class="text-muted text-center py-3">X(Aᵢ) = Value assigned to atom Aᵢ</div>
+                                </div>
+                                <hr>
+                                <p class="text-center mb-0">
+                                    E[X] = <strong id="expected-value">-</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">Conditional Expectation E[X | F]</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="conditional-expectations" style="max-height: 250px; overflow-y: auto;">
+                                    <div class="text-muted text-center py-3">Add partitions to compute E[X | F]</div>
+                                </div>
+                                <hr>
+                                <p class="text-muted small">
+                                    <strong>Property:</strong> E[X | F] is F-measurable (constant on F-atoms)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mathematical Details -->
+                <div class="card mt-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Mathematical Definition</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Conditional Expectation:</strong> Given a random variable X and σ-algebra F ⊆ Σ,</p>
+                        <p class="mb-2">E[X | F] is the unique F-measurable random variable such that:</p>
+                        <ul>
+                            <li>For each atom A ∈ F: E[X | F] is constant on A</li>
+                            <li>E[X | F](ω) = (1/|A|) Σ<sub>ω'∈A</sub> X(ω') for ω ∈ A</li>
+                            <li>This is the average value of X over the atom containing ω</li>
+                        </ul>
+                        <p class="mt-3"><strong>Intuition:</strong> E[X | F] represents the best prediction of X when you only know which atom of F the true state ω belongs to.</p>
+                    </div>
+                </div>
+
+                <!-- Example -->
+                <div class="card mt-3">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">Example</h5>
+                    </div>
+                    <div class="card-body">
+                        <p>Suppose X(A₁) = 100, X(A₂) = 150, X(A₃) = 120, X(A₄) = 180</p>
+                        <p>E[X] = (100 + 150 + 120 + 180) / 4 = <strong>137.5</strong></p>
+                        <p>If F = σ({A₁, A₂}, {A₃, A₄}):</p>
+                        <ul>
+                            <li>For ω ∈ {A₁, A₂}: E[X | F] = (100 + 150) / 2 = <strong>125</strong></li>
+                            <li>For ω ∈ {A₃, A₄}: E[X | F] = (120 + 180) / 2 = <strong>150</strong></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/partition-visualizer.js"></script>
+    <script src="../js/conditional-expectation-visualizer.js"></script>
+</body>
+</html>

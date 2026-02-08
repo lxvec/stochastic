@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binomial Market Model - Stochastic Visualizer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="../index.html">Stochastic Visualizer</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="partitions.html">Partitions</a></li>
+                    <li class="nav-item"><a class="nav-link" href="filtrations.html">Filtrations</a></li>
+                    <li class="nav-item"><a class="nav-link" href="conditional-expectation.html">Conditional Expectation</a></li>
+                    <li class="nav-item"><a class="nav-link" href="martingale.html">Martingale Properties</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="binomial-model.html">Binomial Model</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-5">
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <h1 class="mb-3">Discrete Time Binomial Market Model</h1>
+                <p class="lead text-muted">
+                    The binomial model is a discrete-time model where at each step, the stock price 
+                    multiplies by factor u (up) or d (down) with given probabilities.
+                </p>
+
+                <!-- Model Parameters -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Model Parameters</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Initial Stock Price S₀:</label>
+                                    <input id="init-price" type="number" class="form-control" value="100" step="1" min="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Up Factor (u): <span id="u-val">1.25</span></label>
+                                    <input id="u-mult" type="range" class="form-range" min="1.0" max="2.5" step="0.05" value="1.25">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Down Factor (d): <span id="d-val">0.75</span></label>
+                                    <input id="d-mult" type="range" class="form-range" min="0.1" max="1.0" step="0.05" value="0.75">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Risk-free Rate (r):</label>
+                                    <input id="rate" type="number" class="form-control" value="0.05" step="0.01" min="0" max="0.5">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Number of Periods (T):</label>
+                                    <input id="periods" type="number" class="form-control" value="3" step="1" min="1" max="5">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Real-world Probability (p up): <span id="p-real">0.50</span></label>
+                                    <input id="p-prob" type="range" class="form-range" min="0" max="1" step="0.05" value="0.5">
+                                </div>
+                                <button id="build-tree" class="btn btn-success w-100">Build Price Tree</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">European Call Option Pricing</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Strike Price (K):</label>
+                                    <input id="strike" type="number" class="form-control" value="100" step="1" min="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Maturity (same as T):</label>
+                                    <p class="form-control-static" id="maturity-display">3 periods</p>
+                                </div>
+                                <button id="price-option" class="btn btn-warning w-100 mb-3">Price Option</button>
+                                <div class="alert alert-light">
+                                    <div class="mb-2">
+                                        <strong>Risk-Neutral Call Price:</strong>
+                                        <h4 id="call-price">$-</h4>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted">
+                                            Computed by backward induction using risk-neutral probabilities
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Binomial Tree Visualization -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Binomial Price Tree</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="tree-visualization" style="overflow-x: auto; border-top: 3px solid #ddd; padding-top: 20px;"></div>
+                    </div>
+                </div>
+
+                <!-- Path Analysis -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0">All Possible Paths</h5>
+                            </div>
+                            <div class="card-body" style="max-height: 400px; overflow-y: auto; font-size: 13px; font-family: monospace;">
+                                <div id="paths-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0">Terminal Payoff Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="payoff-chart" style="height: 300px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mathematical Definition -->
+                <div class="card mt-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Mathematical Setup</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Binomial Tree Model:</strong></p>
+                        <ul>
+                            <li>Sₜ₊₁ = Sₜ × u with probability p (real-world)</li>
+                            <li>Sₜ₊₁ = Sₜ × d with probability 1-p (real-world)</li>
+                            <li>Under risk-neutral measure ℚ: p* = (e^(rΔt) - d)/(u - d)</li>
+                        </ul>
+                        <p class="mt-3"><strong>European Call Option:</strong></p>
+                        <ul>
+                            <li>Payoff at maturity T: C_T = max(S_T - K, 0)</li>
+                            <li>Price at t: C_t = E^ℚ[e^(-r(T-t)) C_T | F_t]</li>
+                            <li>Computed by backward induction through the tree</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/binomial-model-visualizer.js"></script>
+</body>
+</html>

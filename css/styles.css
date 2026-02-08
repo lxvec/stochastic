@@ -1,0 +1,117 @@
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.card-header {
+    border-bottom: 2px solid rgba(0, 0, 0, 0.125);
+    font-weight: 600;
+}
+
+#visualization {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 500px;
+    background: white;
+    border-radius: 4px;
+}
+
+svg {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.sample-space {
+    fill: white;
+    stroke: #2c3e50;
+    stroke-width: 3;
+}
+
+.partition-line {
+    stroke: #3498db;
+    stroke-width: 2;
+    cursor: move;
+}
+
+.partition-line:hover {
+    stroke-width: 3;
+    stroke: #2980b9;
+}
+
+.partition-handle {
+    fill: #3498db;
+    cursor: move;
+    transition: r 0.1s ease;
+}
+
+.partition-handle:hover {
+    fill: #2980b9;
+    r: 7;
+}
+
+.partition-handle-area {
+    cursor: col-resize;
+}
+
+.partition-handle-area:hover {
+    fill: rgba(52, 152, 219, 0.1);
+}
+
+.partition-cell {
+    fill: rgba(52, 152, 219, 0.05);
+    stroke: #bdc3c7;
+    stroke-width: 1;
+    pointer-events: none;
+}
+
+.partition-label {
+    font-size: 12px;
+    fill: #2c3e50;
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+#atoms-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.atom-item {
+    padding: 8px;
+    margin: 4px 0;
+    background: #e8f4f8;
+    border-left: 3px solid #3498db;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.sigma-algebra-box {
+    max-height: 400px;
+    overflow-y: auto;
+    background: #f0f7ff;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+}
+
+.sigma-element {
+    padding: 4px 8px;
+    margin: 2px 0;
+    background: white;
+    border-left: 2px solid #27ae60;
+    border-radius: 2px;
+    word-break: break-word;
+}
+
+.empty-set {
+    font-style: italic;
+    color: #7f8c8d;
+}

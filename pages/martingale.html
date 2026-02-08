@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Martingale Properties - Stochastic Visualizer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="../index.html">Stochastic Visualizer</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="partitions.html">Partitions</a></li>
+                    <li class="nav-item"><a class="nav-link" href="filtrations.html">Filtrations</a></li>
+                    <li class="nav-item"><a class="nav-link" href="conditional-expectation.html">Conditional Expectation</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="martingale.html">Martingale Properties</a></li>
+                    <li class="nav-item"><a class="nav-link" href="binomial-model.html">Binomial Model</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid py-5">
+        <div class="row">
+            <div class="col-lg-10 mx-auto">
+                <h1 class="mb-3">Martingale Properties</h1>
+                <p class="lead text-muted">
+                    A martingale is a process where the conditional expectation of the next value,
+                    given all previous information, equals the current value: E[Sₜ₊₁ | Fₜ] = Sₜ
+                </p>
+
+                <!-- Two-Step Binomial Tree -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Binomial Price Tree (t=0,1,2)</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="binomial-tree" style="text-align: center; padding: 20px;"></div>
+                    </div>
+                </div>
+
+                <!-- Probability & Discount Controls -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">Market Parameters</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Initial Price S₀:</label>
+                                    <input id="initial-price" type="number" class="form-control" value="100" step="1" min="1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Up Factor (u): <span id="u-value">1.2</span></label>
+                                    <input id="u-factor" type="range" class="form-range" min="1.0" max="2.0" step="0.05" value="1.2">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Down Factor (d): <span id="d-value">0.8</span></label>
+                                    <input id="d-factor" type="range" class="form-range" min="0.1" max="1.0" step="0.05" value="0.8">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Risk-free Rate (r):</label>
+                                    <input id="risk-free" type="number" class="form-control" value="0.05" step="0.01" min="0">
+                                </div>
+                                <button id="compute-martingale" class="btn btn-success w-100">Compute Martingale Measure</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">Martingale Measure Results</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label">Risk-neutral Prob (p^up):</label>
+                                    <p class="form-control-static" id="p-up-display">-</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Risk-neutral Prob (p^down):</label>
+                                    <p class="form-control-static" id="p-down-display">-</p>
+                                </div>
+                                <div class="alert alert-info" id="martingale-check">
+                                    <strong>Martingale Check:</strong> E[Sₜ₊₁ | Fₜ] = Sₜ?
+                                </div>
+                                <div id="martingale-verification" style="font-size: 13px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Path Analysis -->
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Expected Values at Each Node</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="path-analysis" style="max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 13px;"></div>
+                    </div>
+                </div>
+
+                <!-- Mathematical Definition -->
+                <div class="card mt-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Mathematical Definition</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Martingale:</strong> A process {Sₜ}ₜ≥₀ is a martingale with respect to filtration {Fₜ} and measure ℚ if:</p>
+                        <ul>
+                            <li>Sₜ is Fₜ-measurable for all t</li>
+                            <li>E^ℚ[|Sₜ|] < ∞</li>
+                            <li>E^ℚ[Sₜ | Fₛ] = Sₛ for all s ≤ t</li>
+                        </ul>
+                        <p class="mt-3"><strong>In Finance:</strong> Under the risk-neutral measure ℚ, the discounted stock price is a martingale.</p>
+                        <p>The risk-neutral probability satisfies: e^(rΔt) = p^u · u + p^d · d, where p^u + p^d = 1</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/martingale-visualizer.js"></script>
+</body>
+</html>

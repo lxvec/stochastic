@@ -1,0 +1,335 @@
+% Minimal LaTeX document
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lipsum}
+\usepackage{titling}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{graphicx} 
+
+\newcommand{\sigalg}{\sigma\text{-algebras}}
+\newcommand{\filt}{\mathcal{F}}
+\newcommand{\rv}{X:\Omega \rightarrow \mathbb{R}}
+\newcommand{\rvfull}{\forall x \in \mathbb{R}, \{\omega \in \Omega : X(\omega) \le or = x \}  \in \filt}
+
+\title{Stochastic Calculus: Notes, proofs and exercises}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+I created this document to keep my notes all in one place. Also, typing out proofs in Latex helps me better understand the material. These exercises are based on the course MATH 60646A at HEC Montréal.
+\end{abstract}
+
+\section{Chapter 1: Probability Spaces}
+
+\subsection{Outcomes and Events}
+
+When considering a sample space $\Omega$, we have the most basic building block to the sample space, which are the outcomes, $\omega_i$. An outcome, $\omega$, is an element of $\Omega$. The outcome is the most we can decompose a sample space. \\
+
+If we roll a dice once, the outcomes that make up the sample space of this experiement are \{1,2,3,4,5,6\}. The cardinality of this sample space is 6. \\
+
+
+If we roll a dice twice, the outcomes that makes up the sample space are \{(1,1), (1,2), ... (6,6)\}. The cardinality is 36 (because we have 6 possible outcomes in the first roll times 6 possible outcomes in the second roll - basic combinatorics). \\
+
+If an outcome is the smallest building block of a sample space, then an \textbf{event} is a subset of the sample space $\Omega$. So while outcomes are singletons in the sample space, events are groups of these singletons. A key understanding here is that probability is not assigned to outcomes, \textbf{probability is assigned to events}, which I will explain further later.\\
+
+In our first example of a single dice roll, we have 6 outcomes. These 6 outcomes can be arbitrarily assigned as such: $ \{ w_1 = 1, w_2 = 2, w_3 = 3, w_4 = 4, w_5 = 5, w_6 = 6 \}$
+
+Example of events:
+
+A = "Rolling a 1"
+
+The outcomes that are contained in event A is: $\{w_1 = 1\}$. Since it is just one event out of the 6 events in the sample space, we can use combinatorics to deduce that the probability of event A occurring is the \# of outcomes in event A / \# of outcomes in the entire sample space = 1/6. Event A is assigned a probability of 1/6. \\
+
+This is what we mean when we say that probabiliy is assigned to events and not outcomes. It gets confusing particularly when we ask what the probability of a single outcome is. We may quickly calculate 1 / cardinality of $\Omega$. However, this approach overlooks the rigor of defining an event, listing the outcomes contained within that event and subsequently assigning a probability to the event. \\
+
+B = "Rolling an even number"
+$ \{ w_2 = 2, w_4 = 4, w_6 = 6 \} \in B \subseteq \Omega $. Event B is assigned a probability of 3/6.
+
+Here are a few more events to solidify the relationship between an event and an outcome. If we take the example of rolling a dice, we have 6 outcomes. However, it is worth asking, how many possible events can we create? Think of a few...
+
+- Let A = event of rolling 1. Then A =$ \{ (w_1 = 1) \}$
+
+- Let B = event of rolling 3 and 4. Then B = $ \{ (w_3 = 3), (w_4 = 4) \}$
+
+- Let C = event of rolling an even number == Event of rolling 2,4,6. Then C = $ \{w_2 = 2, w_4 = 4, w_6 = 6 \}$
+
+- Let D = event of rolling a prime number == Event of rolling 2,3,5. Then D = $ \{w_2= 2, w_3 = 3, w_5 = 5 \}$
+
+- Let E = event of rolling Sarah's 2 favourite numbers == Event of rolling 3,4. Then C =  $ \{ (w_3 = 3), (w_4 = 4) \}$ \\
+
+In the above list, I described each event in words and then also wrote it as the set of outcomes it actually corresponds to.
+
+\subsection{$\sigma-algebras$ (intuition without rigour)}
+
+A $\sigma-algebra$ is a set of \textbf{subsets} of our sample space. In particular, since we are studying probabilty theory, I can rewrite the first sentence as: a $\sigma-algebra$ is a set of \textbf{events (since events are subsets)}. This is not the rigourous definition of a $\sigma-algebra$, it has a few more properties that are ignored for now to build intuition. 
+
+A $\sigma-algebra$ is a relevant mathematical object for probability theory because if we have a sample space, we are interested with how many possible events we can observe in the experiment. For a finite, countable sample space, the number of possible events is $2^n$, where n = Card($\Omega$). We call this the power set. \\ 
+
+Lets unpack this number with an example. In the case of rolling a dice, we have 6 possible outcomes. However, we have $2^6$ possible events. In other words, we have $2^6$ possible subsets we can create from 6 outcomes (or elements). Another way to think of this is, how many sets can we create from 6 outcomes? \\
+
+We can model this by drawing out a binary tree, where each level i represents whether $w_i$ is included in the set 
+
+\includegraphics[width=1\textwidth]{binary tree.png}
+
+In the above photo, each path to a leaf node defines a "path" to include or exclude an outcome when constructing a set $A_i$. There are too many levels with 6 outcomes, so reducing this example to a 3-sided die, we look at the image below. 
+
+\includegraphics[width=0.7\textwidth]{binary tree 2.png}
+
+Here, we can see that each path taken to a leaf node represents a uniquely constructed subset of the sample space.
+
+So in the case of a 2 sided die (I suppose this could just be defined as a coin toss), our power set is \{\{1,2\}, \{1\}, \{2\}, \{$\emptyset$\}\}. This is also a $\sigma-algebra$ because it satisfies the three conditions: contains the empty set, closed under complements and closed under countable unions. Closed under complement is evident from the fact that if you look at each element, it's complement is also another element in the collection. Ex: the complement of the event of observing either a 1 or a 2 is to observe nothing. The complement of the event = observing a 1 is the event = observing a 2.
+
+Now, I've introduced $\sigma-algebras$ and have used examples to show that the largest possible $\sigma-algebra$ of a sample space $\Omega$ is the power set. However, we can have smaller $\sigma-algebras$, in fact we can have a whole bunch of them such that we can have an increasing chain of  $\sigma-algebras$, ordered by their coarseness. 
+
+\subsection{Measurability}
+
+I have briefly explained that $\sigalg$ are a collection of subsets that satisfy 3 conditions. The subsets that create this collection are events - so I can also say that a $\sigalg$ is a collections of events.
+
+We now have two mathematical objects, $\Omega$, a sample space and $\filt$, a filtration or $\sigalg$. Together, the pair ($\Omega, \filt$) is called a measurable space.
+
+
+\includegraphics[width=1\textwidth]{partition.png}
+
+
+Some clarifications on the above definitions. The second block defines what a finite partition is, which we are already familiar with it. It is presented to help with the definition that follows. 
+
+All the third definition is saying that there exists a $\sigma$-algebra $\sigma(\mathcal{P})$ that can be generated from a finite partition $\mathcal{P}$ of events of our sample space $\Omega$ - where this finite partition is our choice. Note: this is different from a filtration, which is a sequence of $\sigma$-algebras ordered by time or information.
+
+The sequence of thinking should be:
+1. I have a sample space $\Omega$
+2. There are many events that make up $\Omega$. Again, synonymously, there are many subsets that make up $\Omega$.
+3. We can arbitrarily section these events such that we create a finite partition.
+4. With this finite partition, there exists a smallest $\sigma$-algebra that we can create, using the collection of events that make up our finite partition as a basis. This generated $\sigma$-algebra is denoted $\sigma(\mathcal{P})$. 
+
+Here are some examples.
+Lets say we roll a dice one time. Our sample space is \{1,2,3,4,5,6\}.
+Here are a few valid partitions - and remember, a partition is a collection of events or a collection of subsets.
+
+$\mathcal{P}_1$ = \{(1,2),(3,4,5,6)\}
+
+$\mathcal{P}_2$ = \{(1,2),(3,4),(5),(6)\}
+
+$\mathcal{P}_3$ = \{(1,6),(3),(5),(2,4)\}
+
+These are all finite partitions and they each generate their own $\sigalg$ (denoted $\sigma(\mathcal{P})$), which is the smallest $\sigalg$ that can be created that contains all the elements of the finite partition $\mathcal{P}$.
+
+Here are the above examples' respective $\sigalg$:
+
+$$\sigma(\mathcal{P}_1) = \{\emptyset, \{1,2\}, \{3,4,5,6\}, \{1,2,3,4,5,6\}\}$$
+
+\begin{align*}
+\sigma(\mathcal{P}_2) = \big\{\emptyset, &\{1,2\}, \{3,4\}, \{5\}, \{6\}, \{1,2,3,4\}, \{1,2,5\}, \{1,2,6\}, \\
+&\{3,4,5\}, \{3,4,6\}, \{5,6\}, \{1,2,3,4,5\}, \{1,2,3,4,6\}, \\
+&\{1,2,5,6\}, \{3,4,5,6\}, \{1,2,3,4,5,6\}\big\}
+\end{align*}
+
+$$\sigma(\mathcal{P}_3) = \{\text{all possible unions of } \{1,6\}, \{3\}, \{5\}, \{2,4\}\} = 2^4 = 16 \text{ elements}$$
+
+Notice the pattern: if you have $n$ atoms in your partition, you get $2^n$ elements in the generated $\sigma$-algebra (corresponding to all possible unions of the atoms). It's valid to generate $\sigma(\mathcal{P}_i)$ by making all the possible unions of the atoms/elements/subsets that make up your finite partition because this will also capture the generation of the complements and union of complements. For instance, the second example has \{3,4\} as an atom. Well, we know that the complement \{1,2,5,6\} must also be present in $\sigma(\mathcal{P}_2)$. We can create the complement of this atom by unioning 3 other atoms: \{1,2\}, \{5\}, \{6\}.
+
+Note that I called the subsets atoms. Because now, these subsets are the building blocks for the $\sigalg$. In the beginning of this chapter I interchanged atoms with outcomes, but atom can be generalized to refer to the smallest unit of a given space. When we were talking about the sample space, outcomes were the smallest building block. But now, when talking about $\sigma(\mathcal{P}_i)$, the elements of $\mathcal{P}_i$ have become the smallest building block of the object we are building which is the $\filt$ now. 
+
+Note that the outcomes that make up each atom of our finite partition (again - an atom of our finite partition is an event $A_i$) have now become indistinguishable. 
+
+
+\subsection{Random Variables}
+
+I will go over the definition of a random variable and over the next few paragraphs, I will start relating a random variable to $\sigalg$ to complete the topic of measurability.
+
+A random variable X constructed on the measurable space $(\Omega, \filt)$, is a real-valued function $X: \Omega \rightarrow \mathbb{R}$ such that $\forall x \in \mathbb{R}, \{\omega \in \Omega : X(\omega) \le or = x \}  \in \filt$
+
+In english this is roughly saying that for every real number r, there exists a set of outcomes in our sample space for which the image of these outcomes is equal to this real number r AND the set of this outcome is an element of a filtration.
+
+A function X which is a random variable is an expansion of the functions we have seen thus far in math with certain properties that make it useful for probabilty theory. We are familiar with $y=ax+b, y=ax^2, y = e^x$. Functions are mappings and the properties of these functions just depend on which application in which we are using these functions. In physics, we use functions to explain position in space, velocity, acceleration, waves, etc. In probability theory, it is a little bit more abstract, but we are using a function to help explain a variable that behaves randomly.
+
+Take the experiment of rolling a dice. We can define many random variables on this experiment (and typically we define random variables with respect to what we are interested in observing or measuring - hence caring about measurability which we will see soon)
+
+Here are some examples of random variables:
+
+\subsubsection*{Random Variables and Their Filtrations}
+
+Consider a single roll of a fair six-sided die.
+
+\section*{Random Variables and Their Filtrations}
+
+Consider a single roll of a fair six-sided die.
+
+\subsection*{Probability Space}
+$$
+\Omega = \{1,2,3,4,5,6\}, \qquad
+\mathcal{F} = 2^\Omega,
+$$
+and let $ \mathbb{P} $ be the uniform probability measure on $ \Omega $.
+
+\subsection*{Examples}
+
+\paragraph{1. Identity random variable}
+$$
+X(\omega) = \omega
+$$
+
+$$
+\mathcal{F}_X = \sigma(X) = 2^\Omega.
+$$
+
+\paragraph{2. Parity (even/odd)}
+$$
+Y =
+\begin{cases}
+1, & \text{if the roll is even}, \\
+0, & \text{if the roll is odd}.
+\end{cases}
+$$
+
+$$
+\mathcal{F}_Y
+= \sigma(Y)
+= \{\emptyset, \Omega, \{2,4,6\}, \{1,3,5\}\}.
+$$
+
+\paragraph{3. Indicator variable (roll is a six)}
+$$
+I =
+\begin{cases}
+1, & \text{if the roll is } 6, \\
+0, & \text{otherwise}.
+\end{cases}
+$$
+
+$$
+\mathcal{F}_I
+= \sigma(I)
+= \{\emptyset, \Omega, \{6\}, \Omega \setminus \{6\}\}.
+$$
+
+\paragraph{4. Modulo 3}
+$$
+Z = X \bmod 3
+$$
+
+$$
+\mathcal{F}_Z
+= \sigma(\{3,6\}, \{1,4\}, \{2,5\}).
+$$
+
+\paragraph{5. Maximum with a constant}
+$$
+W = \max(X,4)
+$$
+
+$$
+\mathcal{F}_W
+= \sigma(\{1,2,3,4\}, \{5\}, \{6\}).
+$$
+
+\paragraph{6. Win/Loss variable}
+$$
+V =
+\begin{cases}
+1, & \text{if } X \ge 5, \\
+-1, & \text{otherwise}.
+\end{cases}
+$$
+
+$$
+\mathcal{F}_V
+= \sigma(\{5,6\}, \{1,2,3,4\}).
+$$
+
+\paragraph{7. Nonlinear transformation}
+$$
+U = X^2
+$$
+
+$$
+\mathcal{F}_U = \sigma(U) = 2^\Omega.
+$$
+
+\subsection*{Remark}
+Each random variable above is measurable with respect to its generated
+$\sigalg$, and hence also measurable with respect to $ \mathcal{F} = 2^\Omega $. BUT there exist $\sigalg$ for which these random variables are not measurable and this distinction is important. 
+
+Take example 3, the indicator function on rolling a 6. 
+It is measurable on $\filt = \sigma(\emptyset, \Omega, \{6\}, \{1,2,3,4,5\})$ because the events that characterize the distribution are also elements/atoms of the filtration.
+Let's say we had a filtration $\mathcal{G} = \sigma(\emptyset, \Omega, \{2.4.6\},\{1,3,5\})$. Well, our distribution is interested in the event that our realized random variable is in the set \{6\} or in the set \{1,2,3,4,5\}. But neither of these sets are contained in the filtration $\mathcal{G}$. So, we say that our indicator random variable is F measurable but not G measurable because the events that characterize our random variable are elements of F but are not elements of G. 
+
+If we let $\filt$ be the power set of $\Omega$, then $\filt$ will contain all the possible events in $\Omega$. That means that any real-valued function $X:\Omega \rightarrow \mathbb{R}$ is $\filt$-meaurable.
+
+The biggest takeaway here should be that \textbf{X is $\filt$-measurable if the pre-image of X is a subset of $\filt$.}
+
+
+
+\subsection{Probability Measures}
+
+
+Let $(\Omega, \mathcal{F})$ be a measurable space. The function $P: \mathcal{F} \to [0, 1]$ is a \textbf{probability measure} on $(\Omega, \mathcal{F})$ if
+
+    1. $P(\Omega) = 1$.
+    
+    2. $\forall A \in \mathcal{F}$, $0 \leq P(A) \leq 1$.
+
+    3. $\forall A_1, A_2, \ldots \in \mathcal{F}$ such that $A_i \cap A_j = \emptyset$ if $i \neq j$,
+    \[
+    P\left(\bigcup_{i \geq 1} A_i\right) = \sum_{i \geq 1} P(A_i).
+    \]
+    
+
+    
+The triple $(\Omega, \mathcal{F}, P)$ made up of a sample space, a $\sigma$-algebra on $\Omega$ and a probability measure built on $(\Omega, \mathcal{F})$ is called \textbf{probability space}.
+
+$\Omega$ is the sample space, $\filt$ are the events we are interested in and $\mathcal{P}$ is the measure we assign those events. 
+
+A probability measure is a measure - so it satisfies the rigourous definition provided by measure theory. Probability measure is a function - but it is a separate object from the function X that is a random variable. The input for a probability function is an event $A \in \filt$ which maps to a real number on the interval [0,1]. Whereas the input for a random variable is an outcome $\omega$ which maps to a real number $r \in \mathbb{R}$.
+
+
+\subsection{Connecting a random variable with a probability measure}
+
+We use the probability measure P to assign probabilities to events definined by the random variable X - and remember that the events defined by the random variable are the subsets that create the pre-image of X. \\
+
+\textbf{1. Random variables help us model quantities of interest.} \\
+
+In our experiment of rolling a dice, let's say we win 5\$ if the dice lands on 6 and we win 0\$ if the dice lands on 1,2,3,4,5.
+
+A random variable helps us define the quantity we care about. We don't care if we roll a 2 or a 3 -> we care whether we win 5\$. Well I suppose we implicitly care which outcome we observe, but why require more information that necessary? Rolling a 3 or a 5 mean the same thing to me, so differentiating these outcomes is not required. This is in line with how we really only care about the pre-image of $\rv$. I'm interested in which set of outcomes will lead to a 5\$ win and which set of outcomes will lead to 0\$ gain (so we are starting with $r \in \mathbb{R}$ and then looking for the set $\{w_1,w_2,...w_n\}$ of outcomes that map to r.)
+
+
+\textbf{2. Random variables help us model functions of outcomes, not just the outcome itself.}
+
+This relates a bit too the point 1 of modelling quantities of interest, however it is a special case where X is a numerical 
+
+
+\subsection{Summary}
+
+1. The mathematical object, $\sigalg$, which are collections of events in our sample space $\Omega$
+
+2. Different types of $\sigalg$, called filtrations, denoted by $\filt$. This includes the smallest with two elements $\filt_{min}= \{\Omega,\emptyset\}$ and the largest with $2^{Card(\Omega)}$ elements, $\filt_{max}=\sigma(\Omega)$ which contains all possible subsets of $\Omega$.
+
+3. The real valued function $\rv$ that maps outcomes of our sample space to a real number is a random variable if it is measurable with respect to the $\sigma$-algebra $\filt$.
+
+4. When we take the pre-image of our random variable, we get sets of outcomes. These sets must be elements of our filtration $\filt$ for which we say X is $\filt$-measurable.
+
+5. We saw another function, $P: \mathcal{F} \to [0, 1]$, which is considered a probability measure if it meets certain requirements. The probability function completes the measurable space ($\Omega, \filt, \mathcal{P}$).
+
+
+
+\newpage
+
+
+\subsection{next steps}
+todo 
+- talk about filtrations and diff types of sigma algebras, introduction of fine and course information
+- talk about how we assign probabilty measure to events to make it a full probability model
+- what exactly is a random variable X - well its a function but it becomes a rv iff the events that characterize the ditribution are elements of F. its possible X does not characterize a measurable space G, so its not a random variable on G. Need a good understanding of this to properly undestand what X is F measurable is -> and what does it mean for X to NOT be G measurable.
+
+Let $(\Omega, \mathcal{F})$, $\text{Card}(\Omega) < \infty$ be a measurable space and $P = \{A_1, A_2, \ldots, A_n \}$ be the finite partition of the sample space, $\Omega$, that generates the filtration, $\mathcal{F}$. The function $X: \Omega \rightarrow \mathbb{R}$ is a random variable on that space if and only if $X$ is constant on the atoms of $\mathcal{F}$.
+
+\section{Chapter 2: Stochastic Processes}
+
+\section{Chapter 3: Conditional Expectation}
+
+\end{document}
+
