@@ -98,15 +98,13 @@ class PartitionVisualizer {
     setupGlobalDragListeners() {
         const self = this;
         
-        document.addEventListener('mousemove', function(e) {
+        const handleDragMove = function(clientX, clientY) {
             if (!self.isDragging) return;
             
-            const mouseX = e.clientX;
-            const mouseY = e.clientY;
             const rect = self.svg.node().getBoundingClientRect();
             
-            const relativeX = mouseX - rect.left;
-            const relativeY = mouseY - rect.top;
+            const relativeX = clientX - rect.left;
+            const relativeY = clientY - rect.top;
             
             if (self.draggedLineType === 'vertical') {
                 let newX = relativeX - self.boxX;
@@ -119,9 +117,9 @@ class PartitionVisualizer {
                 self.horizontalLines[self.draggedLineIndex] = Math.round(newY);
                 self.updateDraggedLineDisplay();
             }
-        });
+        };
         
-        document.addEventListener('mouseup', function() {
+        const handleDragEnd = function() {
             if (self.isDragging) {
                 self.isDragging = false;
                 self.draggedLineIndex = null;
@@ -129,7 +127,25 @@ class PartitionVisualizer {
                 self.generateSigmaAlgebra();
                 self.updateUI();
             }
+        };
+        
+        // Mouse events
+        document.addEventListener('mousemove', function(e) {
+            handleDragMove(e.clientX, e.clientY);
         });
+        
+        document.addEventListener('mouseup', handleDragEnd);
+        
+        // Touch events for iPad/mobile
+        document.addEventListener('touchmove', function(e) {
+            if (self.isDragging) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                handleDragMove(touch.clientX, touch.clientY);
+            }
+        }, { passive: false });
+        
+        document.addEventListener('touchend', handleDragEnd);
     }
     
     addVerticalLine(x) {
@@ -287,6 +303,10 @@ class PartitionVisualizer {
                     event.stopPropagation();
                     this.startDrag('vertical', index);
                 })
+                .on('touchstart', (event) => {
+                    event.stopPropagation();
+                    this.startDrag('vertical', index);
+                })
                 .on('contextmenu', (event) => {
                     event.preventDefault();
                     this.removeVerticalLine(index);
@@ -317,6 +337,10 @@ class PartitionVisualizer {
                 .attr('cursor', 'row-resize')
                 .attr('pointer-events', 'all')
                 .on('mousedown', (event) => {
+                    event.stopPropagation();
+                    this.startDrag('horizontal', index);
+                })
+                .on('touchstart', (event) => {
                     event.stopPropagation();
                     this.startDrag('horizontal', index);
                 })
