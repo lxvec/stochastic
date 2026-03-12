@@ -1,0 +1,13 @@
+---
+description: Enforce approval-first workflow for term project work
+alwaysApply: true
+---
+
+# Approval-First Guardrails (Term Project)
+
+- Ask the user for explicit approval before any install, download, or internet fetch.
+- Do not run package managers or network fetch commands without prior approval.
+- Run all architecture decisions by the user before implementation.
+- Record architecture decisions in `TermProject_Master_Package/ARCHITECTURE_DECISIONS.md`.
+- For first iteration deliverables, prioritize a static LaTeX/PDF solution document.
+- Write explanations in an instructor style: intuitive, rigorous, and assumption-explicit.

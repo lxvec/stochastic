@@ -1,0 +1,94 @@
+\contentsline {section}{\numberline {1}Question 2: Spot rate, forward rate, and the zero-coupon yield curve}{4}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Starting from scratch: why do we need a yield curve at all?}{4}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}The zero-coupon bond}{4}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}The zero-coupon yield $y(t,T)$}{4}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}The instantaneous forward rate $f(t,T)$}{5}{subsection.1.4}%
+\contentsline {subsection}{\numberline {1.5}Recovering the bond price from the forward curve}{6}{subsection.1.5}%
+\contentsline {subsection}{\numberline {1.6}Yield as the average of the forward curve}{6}{subsection.1.6}%
+\contentsline {subsection}{\numberline {1.7}The instantaneous short rate $r_t$}{6}{subsection.1.7}%
+\contentsline {subsection}{\numberline {1.8}Static conceptual graph}{7}{subsection.1.8}%
+\contentsline {subsection}{\numberline {1.9}Why does the yield curve have a ``shape'' at all?}{8}{subsection.1.9}%
+\contentsline {subsection}{\numberline {1.10}Simulation ideas for iteration 2}{8}{subsection.1.10}%
+\contentsline {section}{\numberline {2}Question 3: Short-rate dynamics under $\mathbb {P}$ (CIR model)}{9}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Recall: the probability space and measure $\mathbb {P}$}{9}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}What is a standard Brownian motion under $\mathbb {P}$?}{9}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Why do we need a stochastic model for the short rate?}{9}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}The CIR square-root diffusion}{10}{subsection.2.4}%
+\contentsline {paragraph}{The drift term: $\kappa _\mathbb {P}(\theta _\mathbb {P}- r_t)\,\,\mathrm {d}t$.}{10}{section*.4}%
+\contentsline {paragraph}{The long-run level: $\theta _\mathbb {P}$.}{10}{section*.5}%
+\contentsline {paragraph}{The diffusion term: $\sigma \sqrt {r_t}\,\,\mathrm {d}W_t^\mathbb {P}$.}{10}{section*.6}%
+\contentsline {subsection}{\numberline {2.5}(i) Why does this model admit a strong solution?}{11}{subsection.2.5}%
+\contentsline {paragraph}{Weak vs.\ strong solutions.}{11}{section*.7}%
+\contentsline {paragraph}{Standard sufficient conditions.}{11}{section*.8}%
+\contentsline {subsection}{\numberline {2.6}(ii) Parameter constraints: the Feller condition}{11}{subsection.2.6}%
+\contentsline {subsection}{\numberline {2.7}(iii) Interpreting the constraints with examples}{12}{subsection.2.7}%
+\contentsline {subsection}{\numberline {2.8}(iv) The distribution of $r_t$}{12}{subsection.2.8}%
+\contentsline {paragraph}{The result.}{13}{section*.9}%
+\contentsline {paragraph}{What is a non-central chi-squared distribution?}{13}{section*.10}%
+\contentsline {paragraph}{Moments.}{13}{section*.11}%
+\contentsline {subsection}{\numberline {2.9}(v) Mathematical properties and why CIR is appropriate}{14}{subsection.2.9}%
+\contentsline {paragraph}{1. Nonnegativity.}{14}{section*.12}%
+\contentsline {paragraph}{2. Mean reversion.}{14}{section*.13}%
+\contentsline {paragraph}{3. State-dependent (heteroscedastic) volatility.}{14}{section*.14}%
+\contentsline {paragraph}{4. Markov property.}{14}{section*.15}%
+\contentsline {paragraph}{5. Affine structure.}{14}{section*.16}%
+\contentsline {paragraph}{6. Stationary distribution.}{14}{section*.17}%
+\contentsline {subsection}{\numberline {2.10}Static conceptual graph}{15}{subsection.2.10}%
+\contentsline {section}{\numberline {3}Question 4: Risk-neutral dynamics under $\mathbb {Q}$}{16}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Why do we need a different measure?}{16}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}The Radon-Nikodym derivative: the ``exchange rate'' between measures}{16}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Girsanov's theorem: the bridge between $\mathbb {P}$ and $\mathbb {Q}$}{16}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}From $\mathbb {P}$ to $\mathbb {Q}$: rewriting the CIR SDE}{17}{subsection.3.4}%
+\contentsline {subsection}{\numberline {3.5}(ii) The required functional form of $\lambda _t$}{17}{subsection.3.5}%
+\contentsline {subsection}{\numberline {3.6}(i) The link between $(\kappa _\mathbb {P},\theta _\mathbb {P})$ and $(\kappa _\mathbb {Q},\theta _\mathbb {Q})$}{18}{subsection.3.6}%
+\contentsline {subsection}{\numberline {3.7}(iii) Proving the Novikov condition}{18}{subsection.3.7}%
+\contentsline {paragraph}{What is the Novikov condition and why does it matter?}{18}{section*.19}%
+\contentsline {paragraph}{Why is Novikov checking the ``right'' thing?}{18}{section*.20}%
+\contentsline {paragraph}{Verifying Novikov for $\lambda _t = \eta \sqrt {r_t}$.}{19}{section*.21}%
+\contentsline {subsection}{\numberline {3.8}(iv) Why maintain the same structural specification under $\mathbb {Q}$?}{19}{subsection.3.8}%
+\contentsline {paragraph}{First: what does ``not directly observable under $\mathbb {Q}$'' mean?}{19}{section*.22}%
+\contentsline {paragraph}{So why keep the same CIR structure?}{19}{section*.23}%
+\contentsline {paragraph}{Effect of the measure change on expectations and variance.}{20}{section*.24}%
+\contentsline {section}{\numberline {4}Question 5: The discounted bond price is a $\mathbb {Q}$-martingale}{21}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Setup and what we want to prove}{21}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Why this should be true: the no-arbitrage argument}{21}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}The proof}{21}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Financial interpretation of each step}{22}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}The SDE form of the martingale}{22}{subsection.4.5}%
+\contentsline {section}{\numberline {5}Question 6: Zero-coupon bond price in log-affine form (CIR)}{24}{section.5}%
+\contentsline {subsection}{\numberline {5.1}The pricing formula and what we are computing}{24}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}The Feynman-Kac approach: from expectation to PDE}{24}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}(i) Proving the log-affine representation}{25}{subsection.5.3}%
+\contentsline {paragraph}{The ansatz.}{25}{section*.27}%
+\contentsline {paragraph}{Substituting into the PDE.}{25}{section*.28}%
+\contentsline {paragraph}{The ODE system.}{25}{section*.29}%
+\contentsline {paragraph}{Solving the Riccati ODE.}{25}{section*.30}%
+\contentsline {paragraph}{Solving the $a$ ODE.}{26}{section*.31}%
+\contentsline {paragraph}{The result.}{26}{section*.32}%
+\contentsline {subsection}{\numberline {5.4}(ii) SDE satisfied by $P(t,T)$}{26}{subsection.5.4}%
+\contentsline {section}{\numberline {6}Question 7: Fitting the initial yield curve}{28}{section.6}%
+\contentsline {subsection}{\numberline {6.1}The problem: three parameters are not enough}{28}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}The remedy: time-dependent $\theta _t^\mathbb {Q}$}{28}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Bond price formula with time-dependent $\theta _t^\mathbb {Q}$}{28}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Calibrating $\theta _t^\mathbb {Q}$ to the initial curve}{29}{subsection.6.4}%
+\contentsline {paragraph}{Numerical recipe.}{29}{section*.34}%
+\contentsline {subsection}{\numberline {6.5}How do we get $\kappa $ and $\sigma $?}{30}{subsection.6.5}%
+\contentsline {section}{\numberline {7}Question 8: Interest rate swaps}{32}{section.7}%
+\contentsline {subsection}{\numberline {7.1}(i) What is an interest rate swap?}{32}{subsection.7.1}%
+\contentsline {paragraph}{The practical motivation.}{32}{section*.36}%
+\contentsline {paragraph}{The formal definition.}{32}{section*.37}%
+\contentsline {paragraph}{Cash flows.}{32}{section*.38}%
+\contentsline {paragraph}{The floating leg in terms of bond prices.}{32}{section*.39}%
+\contentsline {subsection}{\numberline {7.2}(ii) The swap rate}{33}{subsection.7.2}%
+\contentsline {paragraph}{Definition.}{33}{section*.40}%
+\contentsline {paragraph}{Economic interpretation.}{33}{section*.41}%
+\contentsline {paragraph}{Swap rate as a function of ZCB prices.}{34}{section*.42}%
+\contentsline {section}{\numberline {8}Question 9: Swaptions}{35}{section.8}%
+\contentsline {subsection}{\numberline {8.1}(i) What is a swaption?}{35}{subsection.8.1}%
+\contentsline {paragraph}{Financial motivation.}{35}{section*.44}%
+\contentsline {paragraph}{Formal definition.}{35}{section*.45}%
+\contentsline {subsection}{\numberline {8.2}(ii) Pricing formula}{35}{subsection.8.2}%
+\contentsline {paragraph}{General risk-neutral formula.}{35}{section*.46}%
+\contentsline {paragraph}{The swap-annuity measure.}{35}{section*.47}%
+\contentsline {paragraph}{Black's swaption formula.}{36}{section*.48}%
+\contentsline {paragraph}{CIR pricing via Jamshidian's decomposition.}{36}{section*.49}%
