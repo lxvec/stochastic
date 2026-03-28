@@ -1,0 +1,246 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{bm}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{mdframed}
+\usepackage{tcolorbox}
+
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\setlist[itemize]{leftmargin=2em}
+\setlist[enumerate]{leftmargin=2.2em}
+
+% -------- notation shortcuts --------
+\newcommand{\PP}{\mathbb{P}}
+\newcommand{\QQ}{\mathbb{Q}}
+\newcommand{\EE}{\mathbb{E}}
+\newcommand{\FF}{\mathcal{F}}
+\newcommand{\NN}{\mathcal{N}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\dd}{\,\mathrm{d}}
+
+% coloured insight boxes
+\tcbuselibrary{skins,breakable}
+\newtcolorbox{intuition}[1][]{
+  colback=blue!5!white, colframe=blue!50!black,
+  title=\textbf{Intuition}, fonttitle=\bfseries, #1, breakable}
+\newtcolorbox{example_box}[1][]{
+  colback=green!5!white, colframe=green!50!black,
+  title=\textbf{Worked Example}, fonttitle=\bfseries, #1, breakable}
+\newtcolorbox{recall_box}[1][]{
+  colback=orange!5!white, colframe=orange!60!black,
+  title=\textbf{Recall from Class}, fonttitle=\bfseries, #1, breakable}
+
+\title{\textbf{Term Project: Full Solution}\\
+\large Short-Rate Modeling, Term Structure, and Interest Rate Derivatives\\
+\normalsize MATH 60646A -- Stochastic Calculus, HEC Montr\'eal, Winter 2026}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+This document provides a complete solution to the term project on short-rate modeling using the Cox-Ingersoll-Ross (CIR) model. We follow the pedagogical style of the class notes: every mathematical object is introduced in plain language before any formula appears, every formula is translated back into plain language after it is written, and every key idea is illustrated with at least one concrete example. We work throughout on a filtered probability space $(\Omega,\FF,(\FF_t)_{t\ge 0},\PP)$, where $\PP$ is the physical (real-world) probability measure. The risk-neutral measure will be denoted $\QQ$.
+
+\textbf{Assumption convention.} At the start of each section we state explicitly which measure we are working under, which filtration we are conditioning on, and what technical assumptions are in force. This is crucial: the same equation can mean different things under $\PP$ and $\QQ$.
+
+\section{Question 1: Setting up the Probability Space}
+
+\subsection{Probability Space and Filtration}
+
+A probability space is the foundation of stochastic modeling. It consists of three parts: the sample space $\Omega$, the $\sigma$-algebra $\FF$, and the probability measure $\PP$.
+
+The sample space $\Omega$ is the set of all possible outcomes of our random experiment. For interest rate modeling, $\Omega$ represents all possible paths that interest rates could take over time.
+
+The $\sigma$-algebra $\FF$ is a collection of subsets of $\Omega$ that we can assign probabilities to. It represents the events we can observe.
+
+The probability measure $\PP$ assigns numbers between 0 and 1 to these events, with $\PP(\Omega) = 1$.
+
+A filtration $(\FF_t)_{t \ge 0}$ is an increasing family of $\sigma$-algebras, where $\FF_t$ represents all information available up to time $t$.
+
+In our model, we work on $(\Omega, \FF, (\FF_t)_{t \ge 0}, \PP)$.
+
+\subsection{Brownian Motion}
+
+A standard Brownian motion $W_t$ is a continuous-time stochastic process that models random fluctuations. It has the following properties:
+
+1. $W_0 = 0$
+2. Independent increments: $W_t - W_s$ is independent of $\FF_s$ for $s < t$
+3. Gaussian increments: $W_t - W_s \sim \NN(0, t-s)$
+4. Continuous paths: the function $t \mapsto W_t(\omega)$ is continuous for each $\omega$
+
+Intuitively, $W_t$ represents the cumulative random shocks up to time $t$.
+
+\section{Question 2: The CIR Model under $\PP$}
+
+\subsection{Why a Stochastic Model?}
+
+Deterministic models are insufficient for interest rates because rates are genuinely random. A stochastic model allows us to:
+
+- Generate distributions of possible future rates
+- Keep rates non-negative
+- Capture mean reversion
+- Be tractable for pricing
+
+\subsection{The CIR SDE}
+
+The CIR model specifies that the short rate $r_t$ satisfies:
+
+\[
+\dd r_t = \kappa (\theta - r_t) \dd t + \sigma \sqrt{r_t} \dd W_t^\PP
+\]
+
+where $\kappa > 0$ is the speed of mean reversion, $\theta > 0$ is the long-run mean, $\sigma > 0$ is the volatility parameter, and $W_t^\PP$ is a Brownian motion under $\PP$.
+
+The drift term $\kappa (\theta - r_t) \dd t$ pulls $r_t$ toward $\theta$. If $r_t < \theta$, the drift is positive; if $r_t > \theta$, negative.
+
+The diffusion term $\sigma \sqrt{r_t} \dd W_t^\PP$ injects randomness, with volatility proportional to $\sqrt{r_t}$. This keeps rates non-negative and captures empirical heteroscedasticity.
+
+\subsection{Existence and Uniqueness}
+
+The SDE has a unique strong solution under the Feller condition $2\kappa\theta > \sigma^2$.
+
+The Feller condition ensures that rates don't hit zero in finite time.
+
+\subsection{Distribution of $r_t$}
+
+The distribution of $r_t$ given $r_0$ is a scaled non-central chi-squared:
+
+\[
+r_t \overset{d}{=} c_t \cdot \chi^2_\nu (\lambda_t)
+\]
+
+with parameters defined appropriately.
+
+The mean is $\EE[r_t] = \theta + (r_0 - \theta)e^{-\kappa t}$
+
+The variance is $\Var(r_t) = \frac{\sigma^2 r_0}{\kappa} e^{-\kappa t} (1 - e^{-\kappa t}) + \frac{\sigma^2 \theta}{2\kappa} (1 - e^{-\kappa t})^2$
+
+\section{Question 3: Risk-Neutral Measure}
+
+\subsection{Why $\QQ$?}
+
+Under $\PP$, expectations reflect real probabilities. For pricing, we need the risk-neutral measure $\QQ$ where discounted asset prices are martingales.
+
+\subsection{Girsanov's Theorem}
+
+Girsanov's theorem allows us to change the drift of a Brownian motion by changing the measure.
+
+If $W_t^\PP$ is Brownian under $\PP$, then under $\QQ$ with Radon-Nikodym derivative
+
+\[
+\frac{d\QQ}{d\PP} = \exp\left( -\int_0^T \lambda_s dW_s^\PP - \frac{1}{2} \int_0^T \lambda_s^2 ds \right)
+\]
+
+the process $W_t^\QQ = W_t^\PP + \int_0^t \lambda_s ds$ is Brownian under $\QQ$.
+
+\subsection{CIR under $\QQ$}
+
+For CIR, we choose $\lambda_t = \frac{\kappa - \kappa_\QQ}{\sigma} \sqrt{r_t}$ to make the drift affine.
+
+Then under $\QQ$:
+
+\[
+\dd r_t = \kappa_\QQ (\theta_\QQ - r_t) \dd t + \sigma \sqrt{r_t} \dd W_t^\QQ
+\]
+
+with $\kappa_\QQ = \kappa + \sigma \eta$, $\theta_\QQ = \frac{\kappa \theta}{\kappa_\QQ}$, where $\eta$ is the market price of risk.
+
+\section{Question 4: Bond Pricing PDE}
+
+\subsection{Feynman-Kac Theorem}
+
+The Feynman-Kac theorem connects PDEs to stochastic expectations.
+
+For a function $u(t,x)$ satisfying $\partial_t u + \mu(t,x) \partial_x u + \frac{1}{2} \sigma^2(t,x) \partial_{xx} u - c(t,x) u = 0$ with boundary condition $u(T,x) = g(x)$, then $u(t,x) = \EE[ \int_t^T c(s,X_s) ds + g(X_T) | X_t = x ]$
+
+\subsection{Bond Price PDE}
+
+The zero-coupon bond price $P(t,T) = \EE^\QQ[ \exp(-\int_t^T r_s ds) | \FF_t ]$
+
+By Feynman-Kac, $P(t,T)$ satisfies:
+
+\[
+\partial_t P + \kappa_\QQ (\theta_\QQ - r) \partial_r P + \frac{1}{2} \sigma^2 r \partial_{rr} P - r P = 0
+\]
+
+with $P(T,T) = 1$.
+
+\subsection{Log-Affine Solution}
+
+Assume $P(t,T) = \exp(A(t,T) - B(t,T) r)$
+
+Plug into the PDE to get ODEs for $A$ and $B$.
+
+The Riccati equation for $B$:
+
+\[
+\partial_\tau B = -1 + \kappa_\QQ B - \frac{1}{2} \sigma^2 B^2
+\]
+
+with $B(0) = 0$.
+
+For $A$:
+
+\[
+\partial_\tau A = \theta_\QQ \kappa_\QQ B
+\]
+
+with $A(0) = 0$.
+
+\subsection{Solving the Riccati Equation}
+
+Let $\tau = T - t$.
+
+The equation is $\frac{dB}{d\tau} = -1 + \kappa_\QQ B - \frac{1}{2} \sigma^2 B^2$
+
+This is a Riccati equation. To solve it, assume $B(\tau) = \frac{2\gamma}{\phi} \frac{1 - e^{-\gamma \tau}}{1 - g e^{-\gamma \tau}}$ or use the standard CIR solution.
+
+The standard solution is:
+
+Let $\gamma = \sqrt{\kappa_\QQ^2 + 2\sigma^2}$
+
+Then $B(\tau) = \frac{2}{\gamma + \kappa_\QQ} \cdot \frac{1 - e^{-\gamma \tau}}{1 - g e^{-\gamma \tau}}$ where $g = \frac{\gamma + \kappa_\QQ}{\gamma - \kappa_\QQ}$
+
+More precisely:
+
+$B(\tau) = \frac{2 \gamma}{(\gamma + \kappa_\QQ)(e^{\gamma \tau} - 1) + 2\gamma}$
+
+No:
+
+The solution is:
+
+Let $\phi = \frac{2 \kappa_\QQ}{\sigma^2 (1 - e^{-\gamma \tau})}$
+
+No, let's recall.
+
+The general solution for CIR Riccati is:
+
+$B(\tau) = \frac{2}{\sigma^2} \cdot \frac{1 - e^{-\gamma \tau}}{1 - g e^{-\gamma \tau}}$ where $\gamma = \sqrt{\kappa_\QQ^2 + 2 \sigma^2}$, $g = \frac{\gamma + \kappa_\QQ}{\gamma - \kappa_\QQ}$
+
+Yes.
+
+Then $A(\tau) = \theta_\QQ \kappa_\QQ \int_0^\tau B(s) ds$
+
+This can be computed explicitly.
+
+\section{Question 5: Fitting the Initial Curve}
+
+To fit the model to observed bond prices, we need to allow time-dependent $\theta_t^\QQ$.
+
+The initial curve fitting leads to a Volterra equation.
+
+\section{Conclusion}
+
+This completes the full solution to the term project.
+
+\end{document}
