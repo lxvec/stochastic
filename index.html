@@ -70,6 +70,11 @@
                     <li class="nav-item"><a class="nav-link" href="pages/conditional-expectation.html">Conditional Expectation</a></li>
                     <li class="nav-item"><a class="nav-link" href="pages/martingale.html">Martingale Properties</a></li>
                     <li class="nav-item"><a class="nav-link" href="pages/binomial-model.html">Binomial Model</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pages/ito-basic-process.html">Itô Integral</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pages/cir-model.html">CIR Model</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pages/variation.html">Variation</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pages/ou-sde.html">OU / Ex. 8.1</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pages/discrete_sde.html">Discrete SDE</a></li>
                 </ul>
             </div>
         </div>
@@ -162,14 +167,56 @@
 
             <div class="col-md-6 col-lg-4">
                 <div class="card feature-card h-100">
-                    <div class="alert alert-warning mb-0 rounded-0 border-bottom" role="alert">
-                        <small><strong>AI generated - not verified</strong></small>
-                    </div>
                     <div class="card-body">
-                        <h5 class="card-title">Interactive Learning</h5>
+                        <h5 class="card-title">Itô Integral – Basic Process</h5>
                         <p class="card-text text-muted">
-                            Adjust parameters in real-time and see how the visualizations respond immediately.
+                            Interactively simulate W(t), X(t) and the running stochastic integral I(t).
+                            Adjust a, b, C with sliders, resimulate, overlay K paths, and check the
+                            distribution of I(1) against theory.
                         </p>
+                        <a href="pages/ito-basic-process.html" class="btn btn-sm btn-outline-primary">Explore</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" style="border-left-color: #10b981;">
+                    <div class="card-body">
+                        <h5 class="card-title" style="color:#059669;">Total &amp; Quadratic Variation</h5>
+                        <p class="card-text text-muted">
+                            Compare TV and QV for smooth functions vs. Brownian motion.
+                            Watch TV(BM) diverge like √n while QV(BM)→T and QV(smooth)→0.
+                            Directly motivates the Itô correction term.
+                        </p>
+                        <a href="pages/variation.html" class="btn btn-sm btn-outline-primary">Explore</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" style="border-left-color: #f59e0b;">
+                    <div class="card-body">
+                        <h5 class="card-title" style="color:#78350f;">Exercise 8.1 — OU / SDE Decomposition</h5>
+                        <p class="card-text text-muted">
+                            Three interactive charts for dX_t = κ(θ−X_t)dt + σdW_t.
+                            Explore the drift function, diffusion paths, and their combination.
+                            Preset buttons reproduce the four exercise scenarios.
+                        </p>
+                        <a href="pages/ou-sde.html" class="btn btn-sm btn-outline-primary">Explore</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" style="border-left-color: #7c3aed;">
+                    <div class="card-body">
+                        <h5 class="card-title" style="color:#7c3aed;">CIR Short-Rate Model</h5>
+                        <p class="card-text text-muted">
+                            Simulate the Cox–Ingersoll–Ross square-root diffusion. Explore mean-reversion,
+                            the Feller condition, the non-central χ² distribution, and affine structure
+                            with interactive sliders.
+                        </p>
+                        <a href="pages/cir-model.html" class="btn btn-sm btn-outline-primary">Explore</a>
                     </div>
                 </div>
             </div>

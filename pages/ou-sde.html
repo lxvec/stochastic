@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercise 8.1 — Ornstein-Uhlenbeck SDE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .param-badge { min-width: 56px; text-align: right; font-family: monospace; font-size: 0.85rem; }
+        .slider-row  { display: flex; align-items: center; gap: 10px; }
+        .slider-row label { min-width: 140px; margin: 0; font-size: 0.88rem; }
+        .slider-row input[type=range] { flex: 1; }
+        .stat-row { display: flex; justify-content: space-between; padding: 4px 0;
+                    border-bottom: 1px dashed #dee2e6; font-size: 0.86rem; }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: #555; }
+        .stat-val { font-family: monospace; font-weight: 600; }
+        .formula-box { background: #fffbeb; border-left: 4px solid #f59e0b;
+                       padding: 10px 14px; border-radius: 4px; font-family: 'Courier New', monospace;
+                       font-size: 0.82rem; line-height: 1.8; }
+        .nav-link.active-page { color: #f59e0b !important; font-weight: 600; }
+        #stability-badge { font-size: 0.88rem; padding: 4px 10px; border-radius: 20px; }
+        #drift-chart { min-height: 270px; }
+        #diff-chart  { min-height: 270px; }
+        #full-chart  { min-height: 310px; }
+        .preset-btn  { font-size: 0.78rem; padding: 3px 9px; }
+    </style>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────── -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="../index.html">Stochastic Visualizer</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="filtrations.html">Filtrations</a></li>
+                <li class="nav-item"><a class="nav-link" href="conditional-expectation.html">Conditional Expectation</a></li>
+                <li class="nav-item"><a class="nav-link" href="martingale.html">Martingale Properties</a></li>
+                <li class="nav-item"><a class="nav-link" href="ito-basic-process.html">Itô Integral</a></li>
+                <li class="nav-item"><a class="nav-link" href="variation.html">Variation</a></li>
+                <li class="nav-item"><a class="nav-link" href="cir-model.html">CIR Model</a></li>
+                <li class="nav-item"><a class="nav-link active-page" href="ou-sde.html">OU / Ex. 8.1</a></li>
+                <li class="nav-item"><a class="nav-link" href="discrete_sde.html">Discrete SDE</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Page header ───────────────────────────────────────── -->
+<div style="background: linear-gradient(135deg, #78350f 0%, #f59e0b 100%); color:white; padding:18px 0;">
+    <div class="container">
+        <h4 class="mb-1 fw-bold">Exercise 8.1 — Ornstein–Uhlenbeck SDE</h4>
+        <p class="mb-0 opacity-85" style="font-size:0.92rem;">
+            MATH 60646A HEC Montréal &nbsp;·&nbsp;
+            dX<sub>t</sub> = κ(θ − X<sub>t</sub>)&thinsp;dt + σ&thinsp;dW<sub>t</sub>
+            &nbsp;·&nbsp; Drift &amp; diffusion decomposition with Monte Carlo simulation
+        </p>
+    </div>
+</div>
+
+<!-- ── Main layout ───────────────────────────────────────── -->
+<div class="container-fluid py-3">
+<div class="row g-3">
+
+<!-- ── LEFT: 3 charts ─────────────────────────────────── -->
+<div class="col-lg-8">
+
+    <!-- ── Chart 1: Drift ───────────────────────────────── -->
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-2"
+             style="background:linear-gradient(90deg,#78350f,#d97706); color:white;">
+            <span style="font-size:0.88rem;">
+                <strong>Chart 1 — Drift coefficient</strong>&ensp;
+                b(X<sub>t</sub>) = κ(θ − X<sub>t</sub>) &ensp;as a function of X<sub>t</sub>
+            </span>
+            <span id="stability-badge" class="badge bg-success">κ &gt; 0 — mean-reverting</span>
+        </div>
+        <div class="card-body p-1">
+            <div id="drift-chart"></div>
+        </div>
+        <div class="card-footer bg-light py-2 px-3">
+            <small id="drift-interp" style="font-family:monospace; font-size:0.83rem; color:#374151;"></small>
+        </div>
+    </div>
+
+    <!-- ── Chart 2: Diffusion ───────────────────────────── -->
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-2 bg-light">
+            <span style="font-size:0.88rem; font-weight:600;">
+                Chart 2 — Diffusion contribution &ensp; σ·W(t) &ensp; (K independent paths)
+            </span>
+            <button id="btn-resim" class="btn btn-sm btn-outline-dark fw-bold">⟳ Resimulate</button>
+        </div>
+        <div class="card-body p-1">
+            <div id="diff-chart"></div>
+        </div>
+        <div class="card-footer bg-light py-2 px-3">
+            <small style="font-family:monospace; font-size:0.83rem; color:#374151;">
+                Diffusion contribution alone: σ·dW<sub>t</sub>.
+                Each path is i.i.d.; spread grows like ±σ√t regardless of X<sub>t</sub> (constant diffusion coefficient).
+            </small>
+        </div>
+    </div>
+
+    <!-- ── Chart 3: Combined OU ─────────────────────────── -->
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-2"
+             style="background:linear-gradient(90deg,#1e1b4b,#4f46e5); color:white;">
+            <span style="font-size:0.88rem;">
+                <strong>Chart 3 — Combined:</strong>&ensp;
+                dX<sub>t</sub> = κ(θ − X<sub>t</sub>)dt + σ dW<sub>t</sub> &ensp; (Euler–Maruyama)
+            </span>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="chk-det" checked>
+                <label class="form-check-label text-white" for="chk-det" style="font-size:0.8rem;">
+                    Show ODE (σ=0) path
+                </label>
+            </div>
+        </div>
+        <div class="card-body p-1">
+            <div id="full-chart"></div>
+        </div>
+        <div class="card-footer bg-light py-2 px-3">
+            <small id="full-interp" style="font-family:monospace; font-size:0.83rem; color:#374151;"></small>
+        </div>
+    </div>
+
+    <!-- ── Accordion: exercise cases ─────────────────────── -->
+    <div class="accordion" id="caseAccordion">
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#caseA">
+                    <strong>Case (a): κ=1, θ=1, σ=1, X₀=1</strong> — baseline mean-reverting with moderate noise
+                </button>
+            </h2>
+            <div id="caseA" class="accordion-collapse collapse" data-bs-parent="#caseAccordion">
+                <div class="accordion-body py-3" style="font-size:0.88rem;">
+                    <div class="formula-box mb-2">dX_t = 1·(1 − X_t)dt + 1·dW_t</div>
+                    <p>Since X₀ = θ = 1 the process starts exactly at its long-run mean.
+                    The drift is zero at t=0 and the evolution is driven entirely by noise.
+                    The process is <strong>mean-reverting</strong> (κ=1 &gt; 0): if noise pushes X_t above 1 the drift
+                    pulls it back down; if below 1 the drift pushes it back up.
+                    Over time X_t ≈ N(1, σ²/(2κ)) = N(1, 0.5) in the stationary distribution.</p>
+                    <ul class="mb-0">
+                        <li>Long-run mean E[X_∞] = θ = 1</li>
+                        <li>Long-run variance Var[X_∞] = σ²/(2κ) = 0.5</li>
+                        <li>Half-life of deviations = ln(2)/κ ≈ 0.693 time units</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#caseB">
+                    <strong>Case (b): κ=−1, θ=1, σ=1, X₀=1</strong> — <span style="color:#dc2626;">explosive / unstable</span>
+                </button>
+            </h2>
+            <div id="caseB" class="accordion-collapse collapse" data-bs-parent="#caseAccordion">
+                <div class="accordion-body py-3" style="font-size:0.88rem;">
+                    <div class="formula-box mb-2">dX_t = −1·(1 − X_t)dt + 1·dW_t = (X_t − 1)dt + dW_t</div>
+                    <p>With κ = −1 &lt; 0 the drift now <strong>repels</strong> X_t away from θ=1.
+                    Any small perturbation from 1 is amplified: if X_t &gt; 1, the drift is positive (pushing it further up);
+                    if X_t &lt; 1, the drift is negative (pushing it further down).</p>
+                    <p>In Chart 1 you will see the drift line has a <em>positive</em> slope (slope = −κ = 1),
+                    so the force arrow at X_t &gt; 1 points right, and at X_t &lt; 1 points left — always away from θ.</p>
+                    <p class="mb-0">The process is <strong>explosive</strong>: E[X_t] = 1 + (X₀−1)e^t = 1 (starts exactly at 1),
+                    but any deviation grows exponentially. Paths diverge to ±∞.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#caseC">
+                    <strong>Case (c): κ=1, θ=1, σ=0.1, X₀=1</strong> — mean-reverting with tiny noise
+                </button>
+            </h2>
+            <div id="caseC" class="accordion-collapse collapse" data-bs-parent="#caseAccordion">
+                <div class="accordion-body py-3" style="font-size:0.88rem;">
+                    <div class="formula-box mb-2">dX_t = 1·(1 − X_t)dt + 0.1·dW_t</div>
+                    <p>Same drift as case (a) but the noise σ=0.1 is ten times smaller.
+                    The paths stay very close to the deterministic ODE solution X_t^{det} = 1 (since X₀=θ=1, the ODE solution is flat at 1).
+                    In Chart 2 the diffusion paths are very tightly clustered around 0.</p>
+                    <p class="mb-0">Stationary variance = σ²/(2κ) = 0.005 — extremely concentrated near θ=1.
+                    Chart 3 illustrates how reducing σ brings the stochastic paths closer to the ODE reference line.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#caseD">
+                    <strong>Case (d): κ=1, θ=2, σ=0.3, X₀=1</strong> — drift pulls X upward from below
+                </button>
+            </h2>
+            <div id="caseD" class="accordion-collapse collapse" data-bs-parent="#caseAccordion">
+                <div class="accordion-body py-3" style="font-size:0.88rem;">
+                    <div class="formula-box mb-2">dX_t = 1·(2 − X_t)dt + 0.3·dW_t</div>
+                    <p>Here X₀=1 &lt; θ=2, so at t=0 the drift is κ(θ−X₀) = 1·(2−1) = +1 &gt; 0.
+                    The drift is pulling X_t upward toward 2.
+                    Chart 1 clearly shows the force arrow at X_t=1 pointing rightward (positive drift).</p>
+                    <p>The ODE solution is X_t^{det} = 2 + (1−2)e^{−t} = 2 − e^{−t}, starting at 1 and converging to 2.
+                    The stochastic paths track this deterministic path with fluctuations of size σ/√(2κ) = 0.212.</p>
+                    <p class="mb-0">Stationary distribution: N(2, 0.045). The convergence takes ~5 half-lives = 5·ln2 ≈ 3.5 time units to get within 3% of θ.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#mathRef">
+                    <strong>Mathematical reference — exact OU solution &amp; stationary distribution</strong>
+                </button>
+            </h2>
+            <div id="mathRef" class="accordion-collapse collapse" data-bs-parent="#caseAccordion">
+                <div class="accordion-body py-3" style="font-size:0.88rem;">
+                    <p><strong>Exact solution</strong> (via integrating factor e^{κt}):</p>
+                    <div class="formula-box mb-2">
+                        X_t = θ + (X₀ − θ)e^{−κt} + σ ∫₀ᵗ e^{−κ(t−s)} dW_s
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <div class="p-2 rounded" style="background:#fffbeb; border-left:3px solid #f59e0b;">
+                                <strong style="font-size:0.82rem;">Moments (κ &gt; 0)</strong><br>
+                                <small>
+                                    E[X_t] = θ + (X₀−θ)e^{−κt}<br>
+                                    Var[X_t] = (σ²/2κ)(1 − e^{−2κt})<br>
+                                    E[X_∞] = θ, &ensp;Var[X_∞] = σ²/(2κ)<br>
+                                    Half-life = ln(2)/κ
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-2 rounded" style="background:#fef2f2; border-left:3px solid #dc2626;">
+                                <strong style="font-size:0.82rem;">Moments (κ &lt; 0)</strong><br>
+                                <small>
+                                    E[X_t] = θ + (X₀−θ)e^{−κt} → ±∞<br>
+                                    Var[X_t] = (σ²/2κ)(1−e^{−2κt}) → +∞<br>
+                                    No stationary distribution.<br>
+                                    Paths explode exponentially.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mb-1"><strong>Euler–Maruyama scheme (used in Charts 2 &amp; 3):</strong></p>
+                    <div class="formula-box mb-0">
+                        X_{t+Δt} ≈ X_t + κ(θ − X_t)Δt + σ·ΔW_t
+                        where ΔW_t ~ N(0, Δt), Δt = T/N
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /accordion -->
+</div><!-- /col-lg-8 -->
+
+<!-- ── RIGHT: controls ───────────────────────────────── -->
+<div class="col-lg-4">
+
+    <!-- Parameters card -->
+    <div class="card mb-3">
+        <div class="card-header text-white py-2"
+             style="background:#78350f;">
+            <strong>Parameters</strong>
+        </div>
+        <div class="card-body pb-2">
+
+            <!-- Preset scenario buttons -->
+            <div class="mb-3">
+                <label class="form-label mb-1" style="font-size:0.82rem; color:#555;">
+                    Quick-set exercise scenarios (Δt = 0.01):
+                </label>
+                <div class="d-flex flex-wrap gap-1">
+                    <button class="btn btn-outline-warning preset-btn" id="pre-a">a) κ=1,θ=1,σ=1</button>
+                    <button class="btn btn-outline-danger  preset-btn" id="pre-b">b) κ=−1,θ=1,σ=1</button>
+                    <button class="btn btn-outline-success preset-btn" id="pre-c">c) κ=1,θ=1,σ=0.1</button>
+                    <button class="btn btn-outline-primary preset-btn" id="pre-d">d) κ=1,θ=2,σ=0.3</button>
+                </div>
+            </div>
+            <hr class="my-2">
+
+            <div class="mb-3">
+                <div class="slider-row mb-1">
+                    <label>κ &nbsp;<small class="text-muted">(speed)</small></label>
+                    <span class="badge param-badge" id="lbl-kappa" style="background:#f59e0b; color:#1a1a1a;">1.0</span>
+                </div>
+                <input type="range" class="form-range" id="sl-kappa" min="-3" max="3" step="0.1" value="1">
+                <small class="text-muted d-block">κ &gt; 0 → mean-reverting &nbsp;|&nbsp; κ &lt; 0 → explosive</small>
+            </div>
+
+            <div class="mb-3">
+                <div class="slider-row mb-1">
+                    <label>θ &nbsp;<small class="text-muted">(long-run mean)</small></label>
+                    <span class="badge bg-secondary param-badge" id="lbl-theta">1.00</span>
+                </div>
+                <input type="range" class="form-range" id="sl-theta" min="-2" max="5" step="0.1" value="1">
+            </div>
+
+            <div class="mb-3">
+                <div class="slider-row mb-1">
+                    <label>σ &nbsp;<small class="text-muted">(diffusion)</small></label>
+                    <span class="badge bg-secondary param-badge" id="lbl-sigma">1.00</span>
+                </div>
+                <input type="range" class="form-range" id="sl-sigma" min="0.01" max="3" step="0.05" value="1">
+            </div>
+
+            <div class="mb-3">
+                <div class="slider-row mb-1">
+                    <label>X₀ &nbsp;<small class="text-muted">(initial value)</small></label>
+                    <span class="badge bg-secondary param-badge" id="lbl-x0">1.00</span>
+                </div>
+                <input type="range" class="form-range" id="sl-x0" min="-2" max="5" step="0.1" value="1">
+            </div>
+
+            <hr class="my-2">
+
+            <div class="mb-2">
+                <div class="slider-row mb-1">
+                    <label>T &nbsp;<small class="text-muted">(time horizon)</small></label>
+                    <span class="badge bg-secondary param-badge" id="lbl-T">5.0</span>
+                </div>
+                <input type="range" class="form-range" id="sl-T" min="1" max="20" step="0.5" value="5">
+            </div>
+
+            <div class="mb-2">
+                <div class="slider-row mb-1">
+                    <label>N &nbsp;<small class="text-muted">(time steps)</small></label>
+                    <span class="badge bg-secondary param-badge" id="lbl-N">500</span>
+                </div>
+                <input type="range" class="form-range" id="sl-N" min="50" max="2000" step="50" value="500">
+                <small class="text-muted">Δt = T/N = <span id="lbl-dt">0.0100</span></small>
+            </div>
+
+            <div class="mb-1">
+                <div class="slider-row mb-1">
+                    <label>K &nbsp;<small class="text-muted">(paths)</small></label>
+                    <span class="badge bg-secondary param-badge" id="lbl-K">10</span>
+                </div>
+                <input type="range" class="form-range" id="sl-K" min="1" max="60" step="1" value="10">
+            </div>
+        </div>
+    </div>
+
+    <!-- Live stats -->
+    <div class="card mb-3">
+        <div class="card-header py-2 text-white" style="background:#78350f;">
+            <strong>Live Statistics</strong>
+        </div>
+        <div class="card-body py-2">
+            <div class="stat-row">
+                <span class="stat-label">κ (mean-rev. speed)</span>
+                <span class="stat-val" id="st-kappa">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Drift at X₀ &nbsp;: κ(θ−X₀)</span>
+                <span class="stat-val" id="st-drift">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">E[X_∞] (κ &gt; 0)</span>
+                <span class="stat-val" id="st-emean">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Var[X_∞] = σ²/(2κ)</span>
+                <span class="stat-val" id="st-evar">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">SD[X_∞]</span>
+                <span class="stat-val" id="st-esd">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Half-life = ln2/κ</span>
+                <span class="stat-val" id="st-hl">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">E[X_T] at T</span>
+                <span class="stat-val" id="st-mean-T">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">SD[X_T] at T</span>
+                <span class="stat-val" id="st-sd-T">—</span>
+            </div>
+            <hr class="my-1">
+            <div class="stat-row">
+                <span class="stat-label text-muted" style="font-size:0.78rem;">Δt (step size)</span>
+                <span class="stat-val text-muted" style="font-size:0.78rem;" id="st-dt">—</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick reference -->
+    <div class="card">
+        <div class="card-header py-2 bg-light">
+            <strong style="font-size:0.88rem;">Quick Reference</strong>
+        </div>
+        <div class="card-body py-2" style="font-size:0.82rem; color:#444;">
+            <p class="mb-1"><strong>SDE:</strong><br>
+                dX_t = κ(θ − X_t)dt + σ dW_t</p>
+            <p class="mb-1"><strong>Chart 1 — drift b(X):</strong><br>
+                b(X) = κ(θ − X) — line with slope −κ, zero at X=θ.<br>
+                Green arrows: X_t moves toward θ.<br>
+                Red arrows: X_t moves away from θ.</p>
+            <p class="mb-1"><strong>Chart 2 — diffusion σW_t:</strong><br>
+                Pure noise: ±σ√t envelope, N(0, σ²t).<br>
+                Independent of X_t (constant σ).</p>
+            <p class="mb-0"><strong>Chart 3 — combined X_t:</strong><br>
+                drift pulls toward θ + noise spread.<br>
+                Blue dashed: ODE solution (σ=0 counterfactual).<br>
+                Gray band: ±1 SD theoretical.</p>
+        </div>
+    </div>
+
+</div><!-- /col-lg-4 -->
+
+</div><!-- /row -->
+</div><!-- /container-fluid -->
+
+<!-- ── Footer ─────────────────────────────────────────────── -->
+<footer class="bg-dark text-white py-3 mt-4">
+    <div class="container text-center">
+        <small class="text-muted">
+            Stochastic Calculus Visualizer · MATH 60646A HEC Montréal ·
+            Exercise 8.1 — Ornstein–Uhlenbeck SDE dX_t = κ(θ−X_t)dt + σdW_t
+        </small>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ============================================================
+     ENGINE
+     ============================================================ -->
+<script>
+'use strict';
+
+// ── State ─────────────────────────────────────────────────────
+let p = { kappa:1, theta:1, sigma:1, X0:1, T:5, K:10, N:500 };
+let seed = Date.now() & 0x7fffffff;
+let bmPaths = null;   // K × (N+1) BM paths
+let showDet = true;   // show deterministic ODE path
+
+// ── PRNG (mulberry32) ─────────────────────────────────────────
+function makeRng(s) {
+    let state = s >>> 0;
+    return () => {
+        state = (state + 0x6D2B79F5) >>> 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+function randn(rng) {
+    let u, v;
+    do { u = rng(); } while (u === 0);
+    do { v = rng(); } while (v === 0);
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ── BM path generation for general T ─────────────────────────
+// Returns Float64Array[0..N] where W[i] = BM at time i·T/N
+function generateBM(N, T, rng) {
+    const W = new Float64Array(N + 1);
+    const sq = Math.sqrt(T / N);
+    for (let i = 1; i <= N; i++) W[i] = W[i - 1] + randn(rng) * sq;
+    return W;
+}
+
+function generateAllBM(K, N, T, seed) {
+    const rng = makeRng(seed);
+    return Array.from({ length: K }, () => generateBM(N, T, rng));
+}
+
+// ── OU simulation (Euler–Maruyama) ────────────────────────────
+function simulateOU(kappa, theta, sigma, X0, bmPath, N, T) {
+    const dt = T / N;
+    const X = new Float64Array(N + 1);
+    X[0] = X0;
+    for (let i = 0; i < N; i++) {
+        const dW = bmPath[i + 1] - bmPath[i];   // BM increment ~ N(0, dt)
+        X[i + 1] = X[i] + kappa * (theta - X[i]) * dt + sigma * dW;
+    }
+    return X;
+}
+
+// ── Theoretical OU moments ────────────────────────────────────
+function ouMean(t, kappa, theta, X0) {
+    return theta + (X0 - theta) * Math.exp(-kappa * t);
+}
+function ouVar(t, kappa, sigma) {
+    if (Math.abs(kappa) < 1e-10) return sigma * sigma * t;
+    return (sigma * sigma / (2 * kappa)) * (1 - Math.exp(-2 * kappa * t));
+}
+
+// ── Deterministic ODE solution (σ=0) ─────────────────────────
+function ouDet(t, kappa, theta, X0) {
+    return theta + (X0 - theta) * Math.exp(-kappa * t);
+}
+
+// ── Color palette for K paths ─────────────────────────────────
+const PATH_COLORS = [
+    'rgba(251,146,60,0.65)',  'rgba(139,92,246,0.55)',  'rgba(20,184,166,0.55)',
+    'rgba(236,72,153,0.50)',  'rgba(34,197,94,0.55)',   'rgba(59,130,246,0.50)',
+    'rgba(234,179,8,0.55)',   'rgba(239,68,68,0.50)',   'rgba(14,165,233,0.55)',
+    'rgba(168,85,247,0.50)',  'rgba(249,115,22,0.60)',  'rgba(16,185,129,0.55)',
+];
+function pathColor(k) { return PATH_COLORS[k % PATH_COLORS.length]; }
+
+const plotlyConfig = { responsive: true, displayModeBar: false };
+
+// ── Chart 1: Drift coefficient b(X) = κ(θ − X) ───────────────
+function renderDriftChart(kappa, theta, X0) {
+    const xRange = Math.max(3, Math.abs(X0 - theta) + 2);
+    const xMin = theta - xRange, xMax = theta + xRange;
+    const xVals = Array.from({ length: 200 }, (_, i) => xMin + (xMax - xMin) * i / 199);
+    const bVals = xVals.map(x => kappa * (theta - x));
+    const drift0 = kappa * (theta - X0);
+
+    // Background shading: green where drift > 0, red where drift < 0
+    const shapes = [];
+    if (kappa >= 0) {
+        // drift > 0 for x < theta, drift < 0 for x > theta
+        shapes.push({ type: 'rect', xref: 'x', yref: 'paper',
+            x0: xMin, x1: theta, y0: 0, y1: 1,
+            fillcolor: 'rgba(22,163,74,0.07)', line: { width: 0 } });
+        shapes.push({ type: 'rect', xref: 'x', yref: 'paper',
+            x0: theta, x1: xMax, y0: 0, y1: 1,
+            fillcolor: 'rgba(220,38,38,0.07)', line: { width: 0 } });
+    } else {
+        // drift > 0 for x > theta (κ<0 flips the sign)
+        shapes.push({ type: 'rect', xref: 'x', yref: 'paper',
+            x0: xMin, x1: theta, y0: 0, y1: 1,
+            fillcolor: 'rgba(220,38,38,0.07)', line: { width: 0 } });
+        shapes.push({ type: 'rect', xref: 'x', yref: 'paper',
+            x0: theta, x1: xMax, y0: 0, y1: 1,
+            fillcolor: 'rgba(22,163,74,0.07)', line: { width: 0 } });
+    }
+    // Vertical line at θ
+    shapes.push({ type: 'line', xref: 'x', yref: 'paper',
+        x0: theta, x1: theta, y0: 0, y1: 1,
+        line: { color: 'rgba(75,85,99,0.5)', width: 1.5, dash: 'dash' } });
+    // Horizontal zero line
+    shapes.push({ type: 'line', xref: 'paper', yref: 'y',
+        x0: 0, x1: 1, y0: 0, y1: 0,
+        line: { color: 'rgba(75,85,99,0.4)', width: 1 } });
+
+    // Directional force arrows along y=0 (phase portrait)
+    const numArrows = 18;
+    const annotations = [];
+    const arrowScale = xRange * 0.18;
+    for (let i = 0; i <= numArrows; i++) {
+        const x = xMin + (xMax - xMin) * i / numArrows;
+        const d = kappa * (theta - x);
+        if (Math.abs(d) < 1e-12) continue;
+        const xTip = x + (d > 0 ? 1 : -1) * Math.min(Math.abs(d), xRange * 0.3) * arrowScale;
+        annotations.push({
+            x: xTip, y: 0,
+            ax: x,   ay: 0,
+            xref: 'x', yref: 'y', axref: 'x', ayref: 'y',
+            arrowhead: 2, arrowsize: 0.9, arrowwidth: 1.8,
+            arrowcolor: d > 0 ? 'rgba(22,163,74,0.7)' : 'rgba(220,38,38,0.7)'
+        });
+    }
+
+    // Marker at current X0
+    annotations.push({
+        x: X0, y: drift0,
+        xref: 'x', yref: 'y',
+        text: `&nbsp;X₀ = ${X0.toFixed(2)}<br>&nbsp;b(X₀) = ${drift0.toFixed(4)}`,
+        showarrow: true, arrowhead: 4, arrowsize: 0.8,
+        ax: 30, ay: drift0 > 0 ? -30 : 30,
+        font: { size: 10, color: '#1e1b4b' },
+        bgcolor: 'rgba(255,255,255,0.85)',
+        bordercolor: '#4f46e5', borderwidth: 1, borderpad: 4
+    });
+    // θ label
+    annotations.push({
+        x: theta, y: 0,
+        xref: 'x', yref: 'y',
+        text: `&nbsp;θ = ${theta.toFixed(2)}<br>&nbsp;(b=0)`,
+        showarrow: true, arrowhead: 3, arrowsize: 0.7,
+        ax: 25, ay: -28,
+        font: { size: 9.5, color: '#64748b' },
+        bgcolor: 'rgba(255,255,255,0.8)'
+    });
+
+    const traces = [
+        {
+            x: xVals,
+            y: bVals,
+            mode: 'lines',
+            name: 'b(X) = κ(θ − X)',
+            line: { color: kappa >= 0 ? '#4f46e5' : '#dc2626', width: 3 },
+            hovertemplate: 'X = %{x:.3f}<br>drift = κ(θ−X) = %{y:.4f}<extra></extra>'
+        },
+        {
+            x: [X0], y: [drift0],
+            mode: 'markers',
+            name: 'Current X₀',
+            marker: { color: '#4f46e5', size: 11, symbol: 'circle',
+                      line: { color: '#fff', width: 2 } },
+            hovertemplate: `X₀=${X0.toFixed(3)}, b=${drift0.toFixed(4)}<extra></extra>`
+        }
+    ];
+
+    const layout = {
+        height: 270,
+        margin: { t: 10, r: 20, b: 50, l: 65 },
+        showlegend: false,
+        xaxis: { title: 'X_t', range: [xMin, xMax],
+                 zeroline: false },
+        yaxis: { title: 'b(X_t) = κ(θ − X_t)', autorange: true, zeroline: false },
+        plot_bgcolor: '#fafbff', paper_bgcolor: 'white',
+        shapes, annotations
+    };
+
+    Plotly.react('drift-chart', traces, layout, plotlyConfig);
+
+    // Footer interpretation
+    const dir = drift0 > 0 ? 'will increase ↑' : drift0 < 0 ? 'will decrease ↓' : 'is at rest (no drift)';
+    document.getElementById('drift-interp').textContent =
+        `At X_t = ${X0.toFixed(3)}: b(X₀) = κ(θ − X₀) = ${p.kappa.toFixed(2)}·(${p.theta.toFixed(2)} − ${X0.toFixed(2)}) = ${drift0.toFixed(5)} → X_t ${dir}`;
+
+    // Stability badge
+    const badge = document.getElementById('stability-badge');
+    if (kappa > 0) {
+        badge.className = 'badge bg-success';
+        badge.textContent = 'κ > 0 — mean-reverting';
+    } else if (kappa < 0) {
+        badge.className = 'badge bg-danger';
+        badge.textContent = 'κ < 0 — explosive / unstable';
+    } else {
+        badge.className = 'badge bg-secondary';
+        badge.textContent = 'κ = 0 — pure BM (no drift)';
+    }
+}
+
+// ── Chart 2: Diffusion σ·W(t) ─────────────────────────────────
+function renderDiffChart(sigma, bm, T) {
+    const N = bm[0].length - 1;
+    const ta = Array.from({ length: N + 1 }, (_, i) => i * T / N);
+    const K  = bm.length;
+
+    const traces = [];
+
+    // K diffusion paths
+    for (let k = 0; k < K; k++) {
+        const y = Array.from(bm[k], w => sigma * w);
+        traces.push({
+            x: ta, y,
+            mode: 'lines',
+            name: k === 0 ? 'σ·W(t) paths' : '',
+            showlegend: k === 0,
+            line: { color: pathColor(k), width: k === 0 ? 1.8 : 1.2 },
+            hovertemplate: `W path ${k+1}: σ·W = %{y:.4f}<extra></extra>`
+        });
+    }
+
+    // Theoretical ±σ√t envelope
+    const yPos = ta.map(t => +sigma * Math.sqrt(t));
+    const yNeg = ta.map(t => -sigma * Math.sqrt(t));
+    traces.push({ x: ta, y: yPos, mode: 'lines', name: '+σ√t envelope',
+        line: { color: 'rgba(100,100,100,0.55)', width: 2, dash: 'dot' },
+        hovertemplate: '+σ√t = %{y:.4f}<extra></extra>' });
+    traces.push({ x: ta, y: yNeg, mode: 'lines', name: '−σ√t envelope',
+        line: { color: 'rgba(100,100,100,0.55)', width: 2, dash: 'dot' },
+        hovertemplate: '−σ√t = %{y:.4f}<extra></extra>' });
+    // Shaded band between envelopes
+    traces.push({ x: [...ta, ...ta.slice().reverse()],
+        y: [...yPos, ...yNeg.slice().reverse()],
+        fill: 'toself', fillcolor: 'rgba(156,163,175,0.12)',
+        line: { width: 0 }, name: '±σ√t band', showlegend: false,
+        hoverinfo: 'skip' });
+    // Zero line
+    traces.push({ x: [0, T], y: [0, 0], mode: 'lines', showlegend: false,
+        line: { color: 'rgba(75,85,99,0.4)', width: 1, dash: 'solid' },
+        hoverinfo: 'skip' });
+
+    const layout = {
+        height: 270,
+        margin: { t: 10, r: 20, b: 50, l: 65 },
+        showlegend: true,
+        legend: { orientation: 'h', x: 0.5, xanchor: 'center',
+                  y: -0.22, yanchor: 'top', font: { size: 10 } },
+        xaxis: { title: 't', range: [0, T] },
+        yaxis: { title: 'σ·W(t)', autorange: true },
+        plot_bgcolor: '#fafbff', paper_bgcolor: 'white',
+        hovermode: 'x unified'
+    };
+
+    Plotly.react('diff-chart', traces, layout, plotlyConfig);
+}
+
+// ── Chart 3: Combined OU process ──────────────────────────────
+function renderFullChart(kappa, theta, sigma, X0, bm, T) {
+    const N  = bm[0].length - 1;
+    const K  = bm.length;
+    const dt = T / N;
+    const ta = Array.from({ length: N + 1 }, (_, i) => i * T / N);
+    const traces = [];
+
+    // K simulated OU paths
+    const ouPaths = bm.map(w => simulateOU(kappa, theta, sigma, X0, w, N, T));
+    for (let k = 0; k < K; k++) {
+        traces.push({
+            x: ta, y: Array.from(ouPaths[k]),
+            mode: 'lines',
+            name: k === 0 ? 'Simulated paths' : '',
+            showlegend: k === 0,
+            line: { color: pathColor(k), width: k === 0 ? 1.8 : 1.2 },
+            hovertemplate: `Path ${k+1}: X = %{y:.4f}<extra></extra>`
+        });
+    }
+
+    // Theoretical mean E[X_t]
+    const meanY = ta.map(t => ouMean(t, kappa, theta, X0));
+    traces.push({ x: ta, y: meanY, mode: 'lines', name: 'E[X_t] (theoretical mean)',
+        line: { color: '#111827', width: 2.5, dash: 'dash' },
+        hovertemplate: 'E[X_t] = %{y:.4f}<extra>theoretical mean</extra>' });
+
+    // ±1 SD bands (only if σ > 0 and kappa finite)
+    const sdY = ta.map(t => {
+        const v = ouVar(t, kappa, sigma);
+        return v >= 0 ? Math.sqrt(v) : 0;
+    });
+    const upper = meanY.map((m, i) => m + sdY[i]);
+    const lower = meanY.map((m, i) => m - sdY[i]);
+    traces.push({ x: ta, y: upper, mode: 'lines', name: '+1 SD',
+        line: { color: 'rgba(100,100,100,0.4)', width: 1.5, dash: 'dot' },
+        hovertemplate: '+1 SD: %{y:.4f}<extra></extra>' });
+    traces.push({ x: ta, y: lower, mode: 'lines', name: '−1 SD',
+        line: { color: 'rgba(100,100,100,0.4)', width: 1.5, dash: 'dot' },
+        hovertemplate: '−1 SD: %{y:.4f}<extra></extra>' });
+    traces.push({ x: [...ta, ...ta.slice().reverse()],
+        y: [...upper, ...lower.slice().reverse()],
+        fill: 'toself', fillcolor: 'rgba(156,163,175,0.13)',
+        line: { width: 0 }, name: '±1 SD band', showlegend: false, hoverinfo: 'skip' });
+
+    // Deterministic ODE solution (σ=0 counterfactual)
+    if (showDet) {
+        const detY = ta.map(t => ouDet(t, kappa, theta, X0));
+        traces.push({ x: ta, y: detY, mode: 'lines', name: 'ODE solution (σ=0)',
+            line: { color: '#2563eb', width: 2.5, dash: 'dashdot' },
+            hovertemplate: 'ODE: X = %{y:.4f}<extra>deterministic</extra>' });
+    }
+
+    // θ reference line
+    traces.push({ x: [0, T], y: [theta, theta], mode: 'lines', name: `θ = ${theta.toFixed(2)}`,
+        line: { color: 'rgba(217,119,6,0.6)', width: 1.5, dash: 'dot' },
+        hoverinfo: 'skip' });
+
+    const layout = {
+        height: 310,
+        margin: { t: 10, r: 20, b: 55, l: 65 },
+        showlegend: true,
+        legend: { orientation: 'h', x: 0.5, xanchor: 'center',
+                  y: -0.22, yanchor: 'top', font: { size: 10 } },
+        xaxis: { title: 't', range: [0, T] },
+        yaxis: { title: 'X_t', autorange: true },
+        plot_bgcolor: '#fafbff', paper_bgcolor: 'white',
+        hovermode: 'x unified'
+    };
+
+    Plotly.react('full-chart', traces, layout, plotlyConfig);
+
+    // Footer interpretation
+    const meanAtT = ouMean(T, kappa, theta, X0).toFixed(4);
+    const varAtT  = ouVar(T, kappa, sigma);
+    const sdAtT   = varAtT >= 0 ? Math.sqrt(varAtT).toFixed(4) : 'growing (κ<0)';
+    document.getElementById('full-interp').textContent =
+        `At t = T = ${T}: E[X_T] = ${meanAtT}, SD[X_T] = ${sdAtT}. ` +
+        (kappa > 0 ? `Long-run: X_∞ ~ N(${theta.toFixed(2)}, ${(sigma*sigma/(2*kappa)).toFixed(4)}).`
+                   : kappa < 0 ? 'Process is explosive — variance grows without bound.'
+                                : 'Pure Brownian motion: no drift.');
+}
+
+// ── Stats panel ───────────────────────────────────────────────
+function updateStats() {
+    const { kappa, theta, sigma, X0, T, N } = p;
+    const dt = T / N;
+    const drift0 = kappa * (theta - X0);
+
+    document.getElementById('st-kappa').textContent   = kappa.toFixed(2);
+    document.getElementById('st-drift').textContent   = drift0.toFixed(5);
+    document.getElementById('lbl-dt').textContent     = dt.toFixed(4);
+    document.getElementById('st-dt').textContent      = dt.toFixed(4);
+
+    if (kappa > 1e-9) {
+        const varInf = sigma * sigma / (2 * kappa);
+        document.getElementById('st-emean').textContent  = theta.toFixed(4);
+        document.getElementById('st-evar').textContent   = varInf.toFixed(5);
+        document.getElementById('st-esd').textContent    = Math.sqrt(varInf).toFixed(5);
+        document.getElementById('st-hl').textContent     = (Math.LN2 / kappa).toFixed(4);
+    } else if (kappa < -1e-9) {
+        document.getElementById('st-emean').textContent  = '±∞ (explosive)';
+        document.getElementById('st-evar').textContent   = '+∞ (explosive)';
+        document.getElementById('st-esd').textContent    = '+∞ (explosive)';
+        document.getElementById('st-hl').textContent     = 'N/A (κ < 0)';
+    } else {
+        document.getElementById('st-emean').textContent  = X0.toFixed(4);
+        document.getElementById('st-evar').textContent   = `σ²·T = ${(sigma*sigma*T).toFixed(4)}`;
+        document.getElementById('st-esd').textContent    = (sigma * Math.sqrt(T)).toFixed(4);
+        document.getElementById('st-hl').textContent     = '∞ (κ = 0)';
+    }
+
+    const meanT = ouMean(T, kappa, theta, X0);
+    const varT  = ouVar(T, kappa, sigma);
+    document.getElementById('st-mean-T').textContent = meanT.toFixed(4);
+    document.getElementById('st-sd-T').textContent   = varT >= 0 ? Math.sqrt(varT).toFixed(4) : 'growing';
+}
+
+// ── Debounce ──────────────────────────────────────────────────
+function debounce(fn, ms) {
+    let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+// ── Render ────────────────────────────────────────────────────
+// Full render: regenerates BM paths
+function render() {
+    bmPaths = generateAllBM(p.K, p.N, p.T, seed);
+    renderDriftChart(p.kappa, p.theta, p.X0);
+    renderDiffChart(p.sigma, bmPaths, p.T);
+    renderFullChart(p.kappa, p.theta, p.sigma, p.X0, bmPaths, p.T);
+    updateStats();
+}
+
+// Cheap: only drift changes (no BM needed)
+function renderDriftOnly() {
+    renderDriftChart(p.kappa, p.theta, p.X0);
+    updateStats();
+}
+
+// Medium: BM is reused, but OU simulation re-run
+function renderKeepBM() {
+    renderDriftChart(p.kappa, p.theta, p.X0);
+    renderDiffChart(p.sigma, bmPaths, p.T);
+    renderFullChart(p.kappa, p.theta, p.sigma, p.X0, bmPaths, p.T);
+    updateStats();
+}
+
+const dRender      = debounce(render,      55);
+const dRenderDrift = debounce(renderDriftOnly, 30);
+const dRenderKeep  = debounce(renderKeepBM,    45);
+
+// ── Helper: set all sliders + labels ─────────────────────────
+function applyParams(kappa, theta, sigma, X0, T, N, K) {
+    p = { kappa, theta, sigma, X0, T, K: K ?? p.K, N: N ?? p.N };
+    document.getElementById('sl-kappa').value = kappa;
+    document.getElementById('sl-theta').value = theta;
+    document.getElementById('sl-sigma').value = sigma;
+    document.getElementById('sl-x0').value    = X0;
+    document.getElementById('sl-T').value      = T;
+    if (N) { document.getElementById('sl-N').value = N; }
+    document.getElementById('lbl-kappa').textContent = kappa.toFixed(1);
+    document.getElementById('lbl-theta').textContent = theta.toFixed(2);
+    document.getElementById('lbl-sigma').textContent = sigma.toFixed(2);
+    document.getElementById('lbl-x0').textContent    = X0.toFixed(2);
+    document.getElementById('lbl-T').textContent      = T.toFixed(1);
+    document.getElementById('lbl-N').textContent      = p.N;
+}
+
+// ── Controls ──────────────────────────────────────────────────
+document.getElementById('sl-kappa').addEventListener('input', function () {
+    p.kappa = parseFloat(this.value);
+    document.getElementById('lbl-kappa').textContent = p.kappa.toFixed(1);
+    dRenderKeep();
+});
+document.getElementById('sl-theta').addEventListener('input', function () {
+    p.theta = parseFloat(this.value);
+    document.getElementById('lbl-theta').textContent = p.theta.toFixed(2);
+    dRenderKeep();
+});
+document.getElementById('sl-sigma').addEventListener('input', function () {
+    p.sigma = parseFloat(this.value);
+    document.getElementById('lbl-sigma').textContent = p.sigma.toFixed(2);
+    dRenderKeep();
+});
+document.getElementById('sl-x0').addEventListener('input', function () {
+    p.X0 = parseFloat(this.value);
+    document.getElementById('lbl-x0').textContent = p.X0.toFixed(2);
+    dRenderDrift();          // X0 only affects drift chart inline
+    dRenderKeep();           // also refresh combined chart
+});
+document.getElementById('sl-T').addEventListener('input', function () {
+    p.T = parseFloat(this.value);
+    document.getElementById('lbl-T').textContent = p.T.toFixed(1);
+    document.getElementById('lbl-dt').textContent = (p.T / p.N).toFixed(4);
+    dRender();               // need new BM paths for new T
+});
+document.getElementById('sl-N').addEventListener('input', function () {
+    p.N = parseInt(this.value);
+    document.getElementById('lbl-N').textContent = p.N;
+    document.getElementById('lbl-dt').textContent = (p.T / p.N).toFixed(4);
+    dRender();               // new BM resolution
+});
+document.getElementById('sl-K').addEventListener('input', function () {
+    p.K = parseInt(this.value);
+    document.getElementById('lbl-K').textContent = p.K;
+    dRender();               // regenerate for new K
+});
+document.getElementById('btn-resim').addEventListener('click', () => {
+    seed = (Date.now() ^ (Math.random() * 0xFFFFFF)) & 0x7fffffff;
+    render();
+});
+document.getElementById('chk-det').addEventListener('change', function () {
+    showDet = this.checked;
+    renderFullChart(p.kappa, p.theta, p.sigma, p.X0, bmPaths, p.T);
+});
+
+// Preset scenarios (Δt = 0.01 → N = T/0.01)
+document.getElementById('pre-a').addEventListener('click', () => {
+    applyParams(1, 1, 1, 1, 5, 500);
+    dRender();
+});
+document.getElementById('pre-b').addEventListener('click', () => {
+    // Explosive: use shorter T to prevent blowup display
+    applyParams(-1, 1, 1, 1, 3, 300);
+    dRender();
+});
+document.getElementById('pre-c').addEventListener('click', () => {
+    applyParams(1, 1, 0.1, 1, 5, 500);
+    dRender();
+});
+document.getElementById('pre-d').addEventListener('click', () => {
+    applyParams(1, 2, 0.3, 1, 5, 500);
+    dRender();
+});
+
+// ── Initial render ────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>

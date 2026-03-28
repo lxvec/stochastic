@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIR Short-Rate Model</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .param-badge { min-width: 60px; text-align: right; font-family: monospace; font-size: 0.85rem; }
+        .slider-row { display: flex; align-items: center; gap: 10px; }
+        .slider-row label { min-width: 145px; margin: 0; font-size: 0.9rem; }
+        .slider-row input[type=range] { flex: 1; }
+        .stat-row { display: flex; justify-content: space-between; padding: 4px 0;
+                    border-bottom: 1px dashed #dee2e6; font-size: 0.87rem; }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: #555; }
+        .stat-val { font-family: monospace; font-weight: 600; }
+        #main-chart { min-height: 440px; cursor: crosshair; }
+        #dist-chart  { min-height: 280px; }
+        .formula-box { background: #f5f3ff; border-left: 4px solid #7c3aed;
+                       padding: 10px 14px; border-radius: 4px; font-family: 'Courier New', monospace;
+                       font-size: 0.82rem; line-height: 1.8; }
+        .feller-box { border-radius: 6px; padding: 8px 12px; font-size: 0.85rem; font-family: monospace; line-height: 1.5; }
+        .feller-ok   { background: #d1fae5; border: 1px solid #34d399; color: #065f46; }
+        .feller-warn { background: #fef3c7; border: 1px solid #fbbf24; color: #92400e; }
+        .feller-fail { background: #fee2e2; border: 1px solid #f87171; color: #991b1b; }
+        .nav-link.active-page { color: #06b6d4 !important; font-weight: 600; }
+        .pin-hint { font-size: 0.76rem; color: #888; text-align: center; margin-top: 3px; }
+    </style>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────── -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="../index.html">Stochastic Visualizer</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="partitions.html">Partitions</a></li>
+                <li class="nav-item"><a class="nav-link" href="filtrations.html">Filtrations</a></li>
+                <li class="nav-item"><a class="nav-link" href="conditional-expectation.html">Conditional Expectation</a></li>
+                <li class="nav-item"><a class="nav-link" href="martingale.html">Martingale Properties</a></li>
+                <li class="nav-item"><a class="nav-link" href="binomial-model.html">Binomial Model</a></li>
+                <li class="nav-item"><a class="nav-link" href="ito-basic-process.html">Itô Integral</a></li>
+                <li class="nav-item"><a class="nav-link active-page" href="cir-model.html">CIR Model</a></li>
+                <li class="nav-item"><a class="nav-link" href="variation.html">Variation</a></li>
+                <li class="nav-item"><a class="nav-link" href="ou-sde.html">OU / Ex. 8.1</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Page header ───────────────────────────────────────── -->
+<div style="background: linear-gradient(135deg, #3b0764 0%, #7c3aed 100%); color:white; padding: 18px 0;">
+    <div class="container">
+        <h4 class="mb-1 fw-bold">Cox–Ingersoll–Ross Short-Rate Model</h4>
+        <p class="mb-0 opacity-75" style="font-size:0.92rem;">
+            MATH 60646A HEC Montréal &nbsp;·&nbsp;
+            dr<sub>t</sub> = κ<sup>ℙ</sup>(θ<sup>ℙ</sup> − r<sub>t</sub>) dt + σ√r<sub>t</sub> dW<sub>t</sub><sup>ℙ</sup>,&nbsp; r<sub>0</sub> &gt; 0
+        </p>
+    </div>
+</div>
+
+<!-- ── Main layout ───────────────────────────────────────── -->
+<div class="container-fluid py-3">
+<div class="row g-3">
+
+    <!-- ── LEFT: charts ────────────────────────────────── -->
+    <div class="col-lg-8">
+
+        <!-- Primary chart -->
+        <div class="card mb-3">
+            <div class="card-header text-white d-flex justify-content-between align-items-center py-2"
+                 style="background: linear-gradient(90deg,#3b0764,#7c3aed);">
+                <span>CIR short-rate path r<sub>t</sub> with theoretical mean &amp; ±1σ band</span>
+                <div class="d-flex gap-2 align-items-center">
+                    <button id="btn-clear-pins" class="btn btn-sm btn-warning fw-bold" style="display:none;">✕ Clear Pins</button>
+                    <button id="btn-slices" class="btn btn-sm btn-outline-light">⊞ Slice Dists.</button>
+                    <button id="btn-multi" class="btn btn-sm btn-outline-light">Show K paths</button>
+                    <button id="btn-resim" class="btn btn-sm btn-light fw-bold" style="color:#7c3aed;">⟳ Resimulate</button>
+                </div>
+            </div>
+            <div class="card-body p-1">
+                <div id="main-chart"></div>
+                <div class="pin-hint">Click anywhere on the chart to pin coordinates for comparison · click a pinned marker again to unpin</div>
+            </div>
+        </div>
+
+        <!-- Distribution chart (hidden until toggled) -->
+        <div class="card mb-3" id="dist-card" style="display:none;">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center py-2">
+                <span>Distribution of r<sub>T</sub> — empirical vs. theoretical (non-central χ²)</span>
+                <div class="d-flex align-items-center gap-2">
+                    <label class="text-white mb-0" style="font-size:0.85rem;">Samples:</label>
+                    <select id="sel-samples" class="form-select form-select-sm" style="width:90px;">
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                        <option value="1000" selected>1 000</option>
+                        <option value="5000">5 000</option>
+                    </select>
+                    <button id="btn-run-dist" class="btn btn-sm btn-light text-secondary fw-bold">Run</button>
+                </div>
+            </div>
+            <div class="card-body p-1">
+                <div id="dist-chart"></div>
+            </div>
+        </div>
+
+        <!-- Explanation accordion -->
+        <div class="accordion" id="explainAccordion">
+
+            <!-- (i) Strong solution -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseStrong">
+                        <strong>(i) Why does this model admit a strong solution?</strong>
+                    </button>
+                </h2>
+                <div id="collapseStrong" class="accordion-collapse collapse" data-bs-parent="#explainAccordion">
+                    <div class="accordion-body py-3" style="font-size:0.9rem;">
+                        <p>The SDE dr<sub>t</sub> = κ(θ − r<sub>t</sub>)dt + σ√r<sub>t</sub> dW<sub>t</sub>
+                        admits a <strong>strong solution</strong> by the <strong>Yamada–Watanabe theorem</strong>,
+                        which extends the classical Lipschitz theory to certain Hölder-continuous diffusions.</p>
+                        <ul>
+                            <li><strong>Drift b(r) = κ(θ − r)</strong> is globally Lipschitz: |b(r) − b(r')| = κ|r − r'|.</li>
+                            <li><strong>Diffusion σ(r) = σ√r</strong> is not Lipschitz at r = 0, but satisfies
+                                a <strong>Hölder-½ condition</strong>: |σ√r − σ√r'| ≤ σ√|r − r'|.</li>
+                            <li>Yamada–Watanabe guarantees <em>pathwise uniqueness</em> when the diffusion coefficient
+                                satisfies |σ(r) − σ(r')| ≤ h(|r − r'|) with ∫₀¹ h(u)⁻² du = ∞.
+                                For h(u) = σ√u: ∫₀¹ (σ²u)⁻¹ du = ∞. ✓</li>
+                            <li>Pathwise uniqueness + weak existence (from martingale problem) ⟹ <strong>strong solution</strong>.</li>
+                        </ul>
+                        <p class="mb-0 text-muted" style="font-size:0.82rem;">
+                            <em>Strong</em> means r<sub>t</sub> is a measurable functional of the driving Brownian motion W —
+                            the randomness comes entirely from W, not from any additional independent source.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- (ii-iii) Constraints and interpretation -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseConstraints">
+                        <strong>(ii–iii) Parameter constraints and their interpretation</strong>
+                    </button>
+                </h2>
+                <div id="collapseConstraints" class="accordion-collapse collapse" data-bs-parent="#explainAccordion">
+                    <div class="accordion-body py-3" style="font-size:0.9rem;">
+                        <p>We require κ &gt; 0, θ &gt; 0, σ &gt; 0, and r<sub>0</sub> &gt; 0. The key additional constraint is the <strong>Feller condition</strong>:</p>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-4">
+                                <div class="p-2 rounded" style="background:#ede9fe; border-left:3px solid #7c3aed;">
+                                    <strong style="font-size:0.85rem;">κ — Mean-Reversion Speed</strong><br>
+                                    <small>The drift κ(θ − r<sub>t</sub>) is a restoring force. Half-life of deviations from θ is
+                                    ln(2)/κ years. Large κ → fast pull-back; small κ → persistent excursions.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2 rounded" style="background:#fef9e7; border-left:3px solid #f59e0b;">
+                                    <strong style="font-size:0.85rem;">θ — Long-Run Mean</strong><br>
+                                    <small>The equilibrium short rate. As t → ∞, E[r<sub>t</sub>] → θ and the stationary
+                                    distribution is Gamma(2κθ/σ², 2κ/σ²) with mean θ.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2 rounded" style="background:#ecfdf5; border-left:3px solid #10b981;">
+                                    <strong style="font-size:0.85rem;">σ — Volatility (vol-of-rate)</strong><br>
+                                    <small>Instantaneous variance = σ²r<sub>t</sub>dt. The square-root scaling means
+                                    absolute volatility shrinks toward zero as r<sub>t</sub> → 0 — a key empirical feature.</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-2 rounded" style="background:#fef3c7; border-left:4px solid #f59e0b;">
+                            <strong>Feller Condition: 2κθ ≥ σ²</strong><br>
+                            <small>This ensures the boundary r = 0 is <em>inaccessible</em> — r<sub>t</sub> &gt; 0 almost surely.
+                            Equivalently, the degrees-of-freedom parameter d = 4κθ/σ² ≥ 2.
+                            When violated (d &lt; 2), zero is accessible but reflecting. Drag σ upward
+                            with the slider and watch the Feller indicator turn red — paths will start grazing 0.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- (iv) Distribution -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseDist">
+                        <strong>(iv) Distribution of r<sub>t</sub></strong>
+                    </button>
+                </h2>
+                <div id="collapseDist" class="accordion-collapse collapse" data-bs-parent="#explainAccordion">
+                    <div class="accordion-body py-3" style="font-size:0.9rem;">
+                        <p>Conditional on r<sub>0</sub>, the rescaled process follows a <strong>non-central chi-squared distribution</strong>:</p>
+                        <div class="formula-box mb-3">
+                            c · r<sub>t</sub>  ~  χ²(d, λ(t))<br><br>
+                            c = 4κ / [σ²(1 − e<sup>−κt</sup>)]   &nbsp;(scaling constant)<br>
+                            d = 4κθ / σ²                          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(degrees of freedom; = 2 × Feller ratio)<br>
+                            λ(t) = c · r₀ · e<sup>−κt</sup>      &nbsp;&nbsp;&nbsp;&nbsp;(non-centrality; → 0 as t → ∞)
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <strong>Conditional moments:</strong>
+                                <ul class="mb-0 mt-1" style="font-size:0.87rem;">
+                                    <li>E[r<sub>t</sub>] = r₀e<sup>−κt</sup> + θ(1 − e<sup>−κt</sup>)</li>
+                                    <li>Var[r<sub>t</sub>] = r₀(σ²/κ)(e<sup>−κt</sup> − e<sup>−2κt</sup>)<br>
+                                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ θ(σ²/2κ)(1 − e<sup>−κt</sup>)²</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Stationary distribution (t → ∞):</strong>
+                                <ul class="mb-0 mt-1" style="font-size:0.87rem;">
+                                    <li>r<sub>∞</sub> ~ Gamma(α = 2κθ/σ², β = 2κ/σ²)</li>
+                                    <li>Mean: θ &nbsp;&nbsp; Variance: θσ²/(2κ)</li>
+                                    <li>λ(t) → 0, so non-central → central χ²(d) → Gamma</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <p class="mt-2 mb-0 text-muted" style="font-size:0.82rem;">
+                            Hit <strong>Run</strong> on the distribution chart above to compare the empirical histogram
+                            of r<sub>T</sub> (across independent simulated paths) against the exact theoretical
+                            non-central χ² density — they should align closely for large sample counts.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- (v) Properties -->
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseProps">
+                        <strong>(v) Mathematical properties &amp; suitability for interest-rate modelling</strong>
+                    </button>
+                </h2>
+                <div id="collapseProps" class="accordion-collapse collapse" data-bs-parent="#explainAccordion">
+                    <div class="accordion-body py-3" style="font-size:0.9rem;">
+                        <ul>
+                            <li><strong>Mean-reversion:</strong> The drift κ(θ − r<sub>t</sub>) provides a restoring force.
+                                Rates are pulled toward the long-run level θ, consistent with economic equilibrium and
+                                the empirical observation that rates do not drift without bound.</li>
+                            <li><strong>Non-negativity:</strong> Under the Feller condition 2κθ ≥ σ², r<sub>t</sub> &gt; 0 a.s.,
+                                ruling out negative nominal rates in the model.</li>
+                            <li><strong>Level-dependent volatility:</strong> Instantaneous variance σ²r<sub>t</sub>dt implies
+                                that when rates are low, absolute fluctuations are small — more realistic than the
+                                Vasicek model's constant vol, which can generate negative rates.</li>
+                            <li><strong>Affine structure:</strong> Zero-coupon bond prices have closed form
+                                P(t,T) = A(t,T)·exp(−B(t,T)·r<sub>t</sub>), where A and B satisfy
+                                Riccati ODEs. This makes the model analytically tractable for derivatives pricing.</li>
+                            <li><strong>Ergodicity:</strong> The process has a unique invariant (stationary) distribution
+                                Gamma(2κθ/σ², 2κ/σ²) toward which the marginals converge. Useful for long-horizon calibration.</li>
+                            <li><strong>Distributional tractability:</strong> The non-central χ² distribution has known
+                                moments and CDF (via regularised incomplete gamma), enabling likelihood-based estimation.</li>
+                        </ul>
+                        <p class="mb-0 p-2 rounded" style="background:#f5f3ff; border-left:3px solid #7c3aed;">
+                            <strong>Bottom line:</strong> CIR is the canonical square-root diffusion for interest rates.
+                            It passes the three minimal tests for a short-rate model: (1) rates mean-revert, (2) rates stay
+                            non-negative, and (3) volatility scales with the level. Its affine structure keeps calibration
+                            and pricing tractable — the benchmark model before multi-factor extensions (A₁(3), etc.).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /accordion -->
+    </div><!-- /col-lg-8 -->
+
+    <!-- ── RIGHT: controls ─────────────────────────────── -->
+    <div class="col-lg-4">
+
+        <!-- CIR parameter sliders -->
+        <div class="card mb-3">
+            <div class="card-header text-white py-2" style="background:#3b0764;">
+                <strong>CIR Parameters</strong>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="slider-row mb-1">
+                        <label>Mean-rev. speed <em>κ</em></label>
+                        <span class="badge param-badge" id="lbl-kappa" style="background:#7c3aed;">1.00</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-kappa" min="0.1" max="10.0" step="0.1" value="1.0">
+                </div>
+                <div class="mb-3">
+                    <div class="slider-row mb-1">
+                        <label>Long-run mean <em>θ</em></label>
+                        <span class="badge param-badge" id="lbl-theta" style="background:#7c3aed;">5.00%</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-theta" min="0.001" max="0.200" step="0.001" value="0.050">
+                </div>
+                <div class="mb-3">
+                    <div class="slider-row mb-1">
+                        <label>Volatility <em>σ</em></label>
+                        <span class="badge param-badge" id="lbl-sigma" style="background:#7c3aed;">0.100</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-sigma" min="0.01" max="0.80" step="0.01" value="0.10">
+                </div>
+                <div class="mb-3">
+                    <div class="slider-row mb-1">
+                        <label>Initial rate <em>r₀</em></label>
+                        <span class="badge param-badge" id="lbl-r0" style="background:#7c3aed;">3.00%</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-r0" min="0.001" max="0.200" step="0.001" value="0.030">
+                </div>
+                <div class="mb-3">
+                    <div class="slider-row mb-1">
+                        <label>Time horizon <em>T</em> (yr)</label>
+                        <span class="badge param-badge" id="lbl-T" style="background:#7c3aed;">5.0</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-T" min="0.5" max="20.0" step="0.5" value="5.0">
+                </div>
+                <div class="mb-3">
+                    <div class="slider-row mb-1">
+                        <label>K paths shown</label>
+                        <span class="badge param-badge" id="lbl-k" style="background:#7c3aed;">10</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-k" min="1" max="200" step="1" value="10">
+                </div>
+                <div class="mb-1">
+                    <div class="slider-row mb-1">
+                        <label>Grid steps <em>N</em></label>
+                        <span class="badge bg-secondary param-badge" id="lbl-n">500</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-n" min="100" max="2000" step="50" value="500">
+                </div>
+                <small class="text-muted">dt = T/N. Smaller dt improves Euler accuracy near 0.</small>
+            </div>
+        </div>
+
+        <!-- Feller condition live indicator -->
+        <div class="card mb-3">
+            <div class="card-header py-2 bg-light d-flex justify-content-between align-items-center">
+                <strong style="font-size:0.88rem;">Feller Condition: 2κθ ≥ σ²</strong>
+                <span class="badge bg-secondary" style="font-size:0.75rem;" id="feller-dof">d = —</span>
+            </div>
+            <div class="card-body py-2">
+                <div id="feller-box" class="feller-box feller-ok">—</div>
+                <small class="text-muted mt-1 d-block">
+                    Satisfied → r<sub>t</sub> &gt; 0 a.s. (0 inaccessible).<br>
+                    Violated → r<sub>t</sub> can reach 0 (reflecting boundary).<br>
+                    Degrees of freedom: d = 4κθ/σ². Feller ⟺ d ≥ 2.
+                </small>
+            </div>
+        </div>
+
+        <!-- Multi-path -->
+        <div class="card mb-3">
+            <div class="card-header bg-secondary text-white py-2">
+                <strong>Multi-Path &amp; Slice Options</strong>
+            </div>
+            <div class="card-body">
+                <div class="mb-2 d-flex align-items-center gap-2">
+                    <label style="font-size:0.87rem; min-width:90px; margin:0;">Time slices</label>
+                    <select id="sel-slices" class="form-select form-select-sm" style="width:70px;">
+                        <option value="3">3</option>
+                        <option value="5" selected>5</option>
+                        <option value="7">7</option>
+                    </select>
+                    <small class="text-muted">evenly spaced snapshots</small>
+                </div>
+                <p class="text-muted mb-0" style="font-size:0.82rem;">
+                    <strong>⊞ Slice Dists.</strong> overlays a sideways violin at each snapshot showing
+                    the exact CIR density (non-central χ²) and empirical dots from K paths.
+                    K ≥ 50 gives a clearer picture of the distributional shape.
+                </p>
+            </div>
+        </div>
+
+        <!-- Live statistics -->
+        <div class="card mb-3">
+            <div class="card-header py-2 text-white" style="background:#3b0764;">
+                <strong>Live Statistics at t = T</strong>
+            </div>
+            <div class="card-body py-2">
+                <div class="stat-row">
+                    <span class="stat-label">Realized r<sub>T</sub></span>
+                    <span class="stat-val text-danger" id="stat-rT">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Theoretical E[r<sub>T</sub>]</span>
+                    <span class="stat-val text-primary" id="stat-ERT">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Theoretical Var[r<sub>T</sub>]</span>
+                    <span class="stat-val" id="stat-VarRT">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Theoretical Std[r<sub>T</sub>]</span>
+                    <span class="stat-val" id="stat-StdRT">—</span>
+                </div>
+                <hr class="my-1">
+                <div class="stat-row">
+                    <span class="stat-label">Feller ratio 2κθ/σ²</span>
+                    <span class="stat-val" id="stat-feller">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">D.O.F. d = 4κθ/σ²</span>
+                    <span class="stat-val" id="stat-dof">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Stationary mean (θ)</span>
+                    <span class="stat-val" id="stat-smean">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Stationary std</span>
+                    <span class="stat-val" id="stat-sstd">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Half-life ln2/κ (yr)</span>
+                    <span class="stat-val" id="stat-hl">—</span>
+                </div>
+                <hr class="my-1">
+                <div class="stat-row">
+                    <span class="stat-label text-muted" style="font-size:0.78rem;">Seed</span>
+                    <span class="stat-val text-muted" style="font-size:0.78rem;" id="stat-seed">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick reference -->
+        <div class="card">
+            <div class="card-header py-2 bg-light">
+                <strong style="font-size:0.88rem;">Quick Reference</strong>
+            </div>
+            <div class="card-body py-2" style="font-size:0.82rem; color:#444;">
+                <p class="mb-1"><strong>SDE (physical measure ℙ):</strong><br>
+                    dr<sub>t</sub> = κ(θ − r<sub>t</sub>) dt + σ√r<sub>t</sub> dW<sub>t</sub></p>
+                <p class="mb-1"><strong>Conditional distribution:</strong><br>
+                    c·r<sub>t</sub> ~ χ²(4κθ/σ², c·r₀·e<sup>−κt</sup>)<br>
+                    c = 4κ / [σ²(1−e<sup>−κt</sup>)]</p>
+                <p class="mb-1"><strong>Feller condition:</strong><br>
+                    2κθ ≥ σ² &nbsp;⟺&nbsp; d = 4κθ/σ² ≥ 2 &nbsp;⟹&nbsp; r<sub>t</sub> &gt; 0 a.s.</p>
+                <p class="mb-0"><strong>Stationary distribution:</strong><br>
+                    r<sub>∞</sub> ~ Gamma(2κθ/σ², 2κ/σ²)<br>
+                    Mean = θ, Var = θσ²/(2κ)</p>
+            </div>
+        </div>
+
+    </div><!-- /col-lg-4 -->
+
+</div><!-- /row -->
+</div><!-- /container-fluid -->
+
+<!-- ── Footer ─────────────────────────────────────────────── -->
+<footer class="bg-dark text-white py-3 mt-4">
+    <div class="container text-center">
+        <small class="text-muted">
+            Stochastic Calculus Visualizer · MATH 60646A HEC Montréal ·
+            Cox, Ingersoll &amp; Ross (1985) "A Theory of the Term Structure of Interest Rates"
+        </small>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ============================================================
+     SIMULATION ENGINE
+     ============================================================ -->
+<script>
+'use strict';
+
+// ── State ─────────────────────────────────────────────────────
+let seed = Date.now() & 0x7fffffff;
+let params = { kappa: 1.0, theta: 0.050, sigma: 0.10, r0: 0.030, T: 5.0, N: 500, K: 10 };
+let multiMode = false;
+let sliceMode = false;
+let numSlices = 5;
+let axisRevision = 'stable';
+let currentT = null, currentR = null;
+let currentExtraPaths = []; // orange fan paths (multiMode or sliceMode)
+let currentKPaths = [];     // all K paths, kept for rerenderWithPins
+let pinnedTs = [];
+
+// ── Seeded PRNG (mulberry32) ──────────────────────────────────
+function makeRng(s) {
+    let state = s >>> 0;
+    return function () {
+        state = (state + 0x6D2B79F5) >>> 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function randn(rng) {
+    let u, v;
+    do { u = rng(); } while (u === 0);
+    do { v = rng(); } while (v === 0);
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ── CIR simulation (Euler–Maruyama, full-truncation scheme) ──
+// Full truncation: use max(r, 0) inside drift and diffusion to
+// prevent instability without reflection artefacts.
+function simulateCIR(kappa, theta, sigma, r0, T, N, rng) {
+    const dt    = T / N;
+    const sqDt  = Math.sqrt(dt);
+    const t     = new Float64Array(N + 1);
+    const r     = new Float64Array(N + 1);
+    r[0] = r0;
+    for (let i = 1; i <= N; i++) {
+        t[i] = i * T / N;
+        const ri = Math.max(r[i - 1], 0);
+        const dW = randn(rng) * sqDt;
+        r[i] = Math.max(0, ri + kappa * (theta - ri) * dt + sigma * Math.sqrt(ri) * dW);
+    }
+    return { t, r };
+}
+
+// ── Theoretical moments ───────────────────────────────────────
+function thMean(r0, kappa, theta, t) {
+    const e = Math.exp(-kappa * t);
+    return r0 * e + theta * (1 - e);
+}
+
+function thVar(r0, kappa, theta, sigma, t) {
+    const e  = Math.exp(-kappa * t);
+    const e2 = e * e;
+    return r0 * (sigma * sigma / kappa) * (e - e2)
+         + theta * (sigma * sigma / (2 * kappa)) * (1 - e) * (1 - e);
+}
+
+// ── Non-central chi-squared PDF via Poisson mixture ───────────
+// f_{nc}(y; d, λ) = Σ_j [e^{-λ/2}(λ/2)^j/j!] · f_{χ²(d+2j)}(y)
+function logGamma(x) {
+    if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+    x -= 1;
+    const g = 7;
+    const p = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+               771.32342877765313, -176.61502916214059,  12.507343278686905,
+              -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+    let a = p[0];
+    const t = x + g + 0.5;
+    for (let i = 1; i < g + 2; i++) a += p[i] / (x + i);
+    return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+
+function chi2LogPDF(y, nu) {
+    if (y <= 0) return -Infinity;
+    return (nu / 2 - 1) * Math.log(y) - y / 2 - (nu / 2) * Math.log(2) - logGamma(nu / 2);
+}
+
+function ncchi2PDF(y, d, lambda) {
+    if (y <= 0 || d <= 0) return 0;
+    const halfL = lambda / 2;
+    let sum = 0, logPW = -halfL;
+    for (let j = 0; j <= 100; j++) {
+        if (j > 0) logPW += Math.log(halfL) - Math.log(j);
+        if (!isFinite(logPW)) break;
+        const lf = chi2LogPDF(y, d + 2 * j);
+        if (isFinite(lf)) sum += Math.exp(logPW + lf);
+    }
+    return sum;
+}
+
+// PDF of r_T itself (undo the c-scaling)
+function cirPDF(r, kappa, theta, sigma, r0, T) {
+    if (T <= 0 || r < 0) return 0;
+    const eKT = Math.exp(-kappa * T);
+    const denom = 1 - eKT;
+    if (denom < 1e-12) return 0;
+    const c  = 4 * kappa / (sigma * sigma * denom);
+    const d  = 4 * kappa * theta / (sigma * sigma);
+    const lam = c * r0 * eKT;
+    return c * ncchi2PDF(c * r, d, lam);
+}
+
+// ── Build Plotly traces ───────────────────────────────────────
+function buildTraces(t, r, extraPaths) {
+    const { kappa, theta, sigma, r0, T } = params;
+    const ta = Array.from(t);
+
+    const meanPath = ta.map(ti => thMean(r0, kappa, theta, ti));
+    const stdPath  = ta.map(ti => Math.sqrt(Math.max(0, thVar(r0, kappa, theta, sigma, ti))));
+    const upper    = meanPath.map((m, i) => m + stdPath[i]);
+    const lower    = meanPath.map((m, i) => Math.max(0, m - stdPath[i]));
+
+    const traces = [];
+
+    // Extra K paths (behind everything) — dimmer when slice mode is active
+    if (extraPaths && extraPaths.length > 0) {
+        const baseAlpha = sliceMode ? 0.22 : 0.72;
+        const alpha = Math.max(sliceMode ? 0.06 : 0.22, baseAlpha - extraPaths.length * 0.007);
+        const lw = extraPaths.length > 40 ? 1 : 1.5;
+        extraPaths.forEach((rk, idx) => {
+            traces.push({
+                x: ta, y: Array.from(rk),
+                name: idx === 0 ? `${extraPaths.length} CIR paths` : '',
+                showlegend: idx === 0,
+                mode: 'lines',
+                line: { color: `rgba(180,83,0,${alpha})`, width: lw },
+                hoverinfo: 'skip'
+            });
+        });
+    }
+
+    // ±1 std shaded band
+    traces.push({
+        x: [...ta, ...ta.slice().reverse()],
+        y: [...upper, ...lower.slice().reverse()],
+        fill: 'toself', fillcolor: 'rgba(124,58,237,0.10)',
+        line: { color: 'transparent' },
+        name: '±1 Std[r_t]',
+        showlegend: true,
+        hoverinfo: 'skip',
+        type: 'scatter'
+    });
+
+    // Theoretical mean path
+    traces.push({
+        x: ta, y: meanPath,
+        name: 'E[r_t | r₀] (theoretical)',
+        mode: 'lines',
+        line: { color: '#2563eb', width: 2, dash: 'dash' },
+        hovertemplate: 'E[r(%{x:.2f})] = %{y:.5f}<extra></extra>'
+    });
+
+    // θ — long-run mean horizontal reference
+    traces.push({
+        x: [0, T], y: [theta, theta],
+        name: 'θ (long-run mean)',
+        mode: 'lines',
+        line: { color: 'rgba(16,185,129,0.8)', width: 1.5, dash: 'dot' },
+        hovertemplate: 'θ = ' + theta.toFixed(5) + '<extra></extra>'
+    });
+
+    // Primary simulated path
+    traces.push({
+        x: ta, y: Array.from(r),
+        name: 'r(t) — CIR path',
+        mode: 'lines',
+        line: { color: '#dc2626', width: 2 },
+        hovertemplate: 'r(%{x:.3f}) = %{y:.5f}<extra></extra>'
+    });
+
+    return traces;
+}
+
+function buildLayout(uirev, extraShapes = [], extraAnnotations = []) {
+    const { T } = params;
+    return {
+        height: 440,
+        margin: { t: 20, r: 20, b: 80, l: 65 },
+        showlegend: true,
+        legend: {
+            orientation: 'h',
+            x: 0.5, xanchor: 'center',
+            y: -0.2, yanchor: 'top',
+            font: { size: 11 },
+            bgcolor: 'rgba(255,255,255,0)',
+        },
+        uirevision: uirev,
+        xaxis: { title: 't (years)', range: [-0.01 * T, T * 1.01] },
+        yaxis: { title: 'r_t', autorange: true, tickformat: '.3f' },
+        plot_bgcolor: '#fafbff',
+        paper_bgcolor: 'white',
+        hovermode: 'x unified',
+        shapes: extraShapes,
+        annotations: extraAnnotations
+    };
+}
+
+const plotlyConfig = {
+    responsive: true,
+    displayModeBar: true,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d'],
+    toImageButtonOptions: { filename: 'cir_model', scale: 2 }
+};
+
+// ── Pinned-point helpers ──────────────────────────────────────
+function buildPinnedTraces() {
+    if (pinnedTs.length === 0 || !currentT) return [];
+    const N = currentT.length - 1;
+    const tPts = [], rPts = [];
+    pinnedTs.forEach(tVal => {
+        const idx = Math.min(Math.round(tVal / params.T * N), N);
+        tPts.push(currentT[idx]);
+        rPts.push(currentR[idx]);
+    });
+    return [{
+        x: tPts, y: rPts,
+        mode: 'markers', type: 'scatter',
+        name: 'Pinned', showlegend: false,
+        marker: { symbol: 'circle', size: 11, color: '#dc2626',
+                  line: { color: '#fff', width: 2 } },
+        hovertemplate: 'r(%{x:.3f}) = %{y:.5f}<extra>📌 click to unpin</extra>',
+    }];
+}
+
+function buildPinnedExtras() {
+    if (pinnedTs.length === 0 || !currentT) return { shapes: [], annotations: [] };
+    const N = currentT.length - 1;
+    const { kappa, theta, sigma, r0, T } = params;
+    const shapes = [], annotations = [];
+
+    pinnedTs.forEach((tVal, k) => {
+        const idx  = Math.min(Math.round(tVal / T * N), N);
+        const t_a  = currentT[idx];
+        const r_a  = currentR[idx];
+        const e_a  = thMean(r0, kappa, theta, t_a);
+        const s_a  = Math.sqrt(Math.max(0, thVar(r0, kappa, theta, sigma, t_a)));
+
+        shapes.push({
+            type: 'line', xref: 'x', yref: 'paper',
+            x0: t_a, x1: t_a, y0: 0, y1: 1,
+            line: { color: 'rgba(255,140,0,0.65)', width: 1.5, dash: 'dot' }
+        });
+
+        const xAnchor = t_a > T * 0.78 ? 'right' : 'left';
+        const yAnchor = (k % 2 === 0) ? 0.99 : 0.72;
+        annotations.push({
+            xref: 'x', yref: 'paper',
+            x: t_a, y: yAnchor,
+            xanchor: xAnchor, yanchor: 'top',
+            text: `<b>t = ${t_a.toFixed(3)}</b><br>` +
+                  `<span style="color:#dc2626">r &nbsp;&nbsp;= ${r_a.toFixed(5)}</span><br>` +
+                  `<span style="color:#2563eb">E[r] = ${e_a.toFixed(5)}</span><br>` +
+                  `<span style="color:#7c3aed">Std &nbsp;= ${s_a.toFixed(5)}</span>`,
+            showarrow: false,
+            bgcolor: 'rgba(255,255,255,0.92)',
+            bordercolor: 'rgba(255,140,0,0.8)',
+            borderwidth: 1, borderpad: 5,
+            font: { size: 9.5, family: 'monospace' },
+            align: 'left',
+        });
+    });
+
+    return { shapes, annotations };
+}
+
+// ── Distribution slice violins ────────────────────────────────
+// At numSlices evenly-spaced snapshot times, draw:
+//   • A sideways violin (theoretical CIR PDF, symmetric around t_k)
+//   • A horizontal mean tick inside the violin
+//   • Jittered empirical dots (K path values), contained within violin width
+function buildSliceTraces(kPaths) {
+    if (!sliceMode || !currentT || kPaths.length === 0) return [];
+    const { kappa, theta, sigma, r0, T } = params;
+    const N = currentT.length - 1;
+    const traces = [];
+
+    // Violin half-width adapts to spacing so violins don't overlap
+    const spacing = T / numSlices;
+    const dw = Math.min(spacing * 0.42, T * 0.065);
+
+    const snapTs = Array.from({ length: numSlices }, (_, i) => T * (i + 1) / numSlices);
+
+    snapTs.forEach((t_k, idx) => {
+        const ki  = Math.min(Math.round(t_k / T * N), N);
+        const t_a = currentT[ki];
+
+        const ERT = thMean(r0, kappa, theta, t_a);
+        const SRT = Math.sqrt(Math.max(0, thVar(r0, kappa, theta, sigma, t_a)));
+        if (SRT < 1e-10) return;
+
+        // Build theoretical PDF curve
+        const rMin = Math.max(0, ERT - 4.3 * SRT);
+        const rMax = ERT + 4.6 * SRT;
+        const rv = [], pv = [];
+        for (let j = 0; j <= 90; j++) {
+            const rv_j = rMin + (rMax - rMin) * j / 90;
+            rv.push(rv_j);
+            pv.push(cirPDF(rv_j, kappa, theta, sigma, r0, t_a));
+        }
+        const maxP = Math.max(...pv);
+        if (maxP < 1e-15) return;
+
+        // Symmetric violin polygon (right edge → left edge → close)
+        const xR = pv.map(p => t_a + dw * p / maxP);
+        const xL = pv.map(p => t_a - dw * p / maxP);
+        traces.push({
+            x: [...xR, ...xL.slice().reverse(), xR[0]],
+            y: [...rv,  ...rv.slice().reverse(),  rv[0]],
+            fill: 'toself',
+            fillcolor: 'rgba(124,58,237,0.16)',
+            line: { color: 'rgba(124,58,237,0.70)', width: 1.3 },
+            mode: 'lines', type: 'scatter',
+            name: idx === 0 ? 'CIR density at slice' : '',
+            showlegend: idx === 0,
+            hoverinfo: 'skip'
+        });
+
+        // Mean tick (horizontal bar across full violin width)
+        traces.push({
+            x: [t_a - dw, t_a + dw], y: [ERT, ERT],
+            mode: 'lines', type: 'scatter',
+            showlegend: false,
+            line: { color: '#7c3aed', width: 2.5 },
+            hovertemplate: `E[r | t=${t_a.toFixed(2)}] = ${ERT.toFixed(5)}<extra>slice mean</extra>`
+        });
+
+        // Empirical dots — golden-ratio jitter (deterministic, avoids random flicker)
+        const empY = kPaths.map(rk => rk[ki]);
+        const dotSize = kPaths.length > 60 ? 3 : kPaths.length > 25 ? 4 : 5.5;
+        const empX = empY.map((_, i) => t_a + (((i * 0.6180339887) % 1) - 0.5) * 1.55 * dw);
+        traces.push({
+            x: empX, y: empY,
+            mode: 'markers', type: 'scatter',
+            name: idx === 0 ? `Empirical r_t (K = ${kPaths.length})` : '',
+            showlegend: idx === 0,
+            marker: {
+                size: dotSize,
+                color: 'rgba(220,38,38,0.58)',
+                line: { width: 0 }
+            },
+            hovertemplate: `t = ${t_a.toFixed(2)}, r = %{y:.5f}<extra>empirical</extra>`
+        });
+    });
+
+    return traces;
+}
+
+function updatePinUI() {
+    const btn = document.getElementById('btn-clear-pins');
+    if (pinnedTs.length > 0) {
+        btn.style.display = '';
+        btn.textContent = `✕ Clear ${pinnedTs.length} Pin${pinnedTs.length > 1 ? 's' : ''}`;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function rerenderWithPins() {
+    if (!currentT) return;
+    const { shapes: pinShapes, annotations: pinAnn } = buildPinnedExtras();
+    const layout = buildLayout(axisRevision, pinShapes, pinAnn);
+    const baseTraces  = buildTraces(currentT, currentR, multiMode ? currentKPaths : []);
+    const sliceTraces = buildSliceTraces(currentKPaths);
+    Plotly.react('main-chart', [...baseTraces, ...sliceTraces, ...buildPinnedTraces()], layout, plotlyConfig);
+    updatePinUI();
+}
+
+// ── Stats and Feller indicator ────────────────────────────────
+function updateStats(rT, kappa, theta, sigma, r0, T) {
+    const ERT   = thMean(r0, kappa, theta, T);
+    const VRT   = thVar(r0, kappa, theta, sigma, T);
+    const fRat  = 2 * kappa * theta / (sigma * sigma);
+    const dof   = 2 * fRat;
+    const sSt   = Math.sqrt(theta * sigma * sigma / (2 * kappa));
+
+    document.getElementById('stat-rT').textContent    = rT.toFixed(5);
+    document.getElementById('stat-ERT').textContent   = ERT.toFixed(5);
+    document.getElementById('stat-VarRT').textContent = VRT.toFixed(7);
+    document.getElementById('stat-StdRT').textContent = Math.sqrt(Math.max(0, VRT)).toFixed(5);
+    document.getElementById('stat-feller').textContent= fRat.toFixed(4);
+    document.getElementById('stat-dof').textContent   = dof.toFixed(4);
+    document.getElementById('stat-smean').textContent = theta.toFixed(5);
+    document.getElementById('stat-sstd').textContent  = sSt.toFixed(5);
+    document.getElementById('stat-hl').textContent    = (Math.LN2 / kappa).toFixed(3);
+    document.getElementById('stat-seed').textContent  = seed;
+}
+
+function updateFeller(kappa, theta, sigma) {
+    const lhs   = 2 * kappa * theta;
+    const rhs   = sigma * sigma;
+    const ratio = lhs / rhs;
+    const dof   = 2 * ratio;
+    document.getElementById('feller-dof').textContent = `d = ${dof.toFixed(2)}`;
+
+    const box = document.getElementById('feller-box');
+    box.className = 'feller-box';
+    if (ratio >= 1.5) {
+        box.classList.add('feller-ok');
+        box.innerHTML = `✓ Satisfied &nbsp;(ratio = ${ratio.toFixed(3)})<br>
+            <small>2κθ = ${lhs.toFixed(4)} &nbsp;≥&nbsp; σ² = ${rhs.toFixed(4)}<br>
+            r<sub>t</sub> &gt; 0 a.s. — boundary 0 is inaccessible</small>`;
+    } else if (ratio >= 1.0) {
+        box.classList.add('feller-warn');
+        box.innerHTML = `⚠ Barely met &nbsp;(ratio = ${ratio.toFixed(3)})<br>
+            <small>2κθ = ${lhs.toFixed(4)} &nbsp;≥&nbsp; σ² = ${rhs.toFixed(4)}<br>
+            r<sub>t</sub> &gt; 0 a.s. but paths may approach 0</small>`;
+    } else {
+        box.classList.add('feller-fail');
+        box.innerHTML = `✗ Violated &nbsp;(ratio = ${ratio.toFixed(3)})<br>
+            <small>2κθ = ${lhs.toFixed(4)} &nbsp;&lt;&nbsp; σ² = ${rhs.toFixed(4)}<br>
+            Boundary 0 accessible — zero-touching paths possible</small>`;
+    }
+}
+
+// ── Distribution chart ────────────────────────────────────────
+function runDistribution() {
+    const { kappa, theta, sigma, r0, T } = params;
+    const nSamples = parseInt(document.getElementById('sel-samples').value);
+    const N_dist   = 300;
+    const samples  = new Float64Array(nSamples);
+    for (let k = 0; k < nSamples; k++) {
+        const rng = makeRng((seed * 1337 + k * 7919) >>> 0);
+        const { r } = simulateCIR(kappa, theta, sigma, r0, T, N_dist, rng);
+        samples[k] = r[N_dist];
+    }
+
+    const ERT  = thMean(r0, kappa, theta, T);
+    const SRT  = Math.sqrt(Math.max(0, thVar(r0, kappa, theta, sigma, T)));
+    const rMin = Math.max(0, ERT - 4.5 * SRT);
+    const rMax = ERT + 4.5 * SRT;
+    const xPDF = [], yPDF = [];
+    for (let i = 0; i <= 300; i++) {
+        const rv = rMin + (rMax - rMin) * i / 300;
+        xPDF.push(rv);
+        yPDF.push(cirPDF(rv, kappa, theta, sigma, r0, T));
+    }
+
+    const traces = [
+        {
+            x: Array.from(samples),
+            type: 'histogram',
+            histnorm: 'probability density',
+            name: 'Empirical r_T',
+            marker: { color: 'rgba(220,38,38,0.45)', line: { color: '#991b1b', width: 0.5 } },
+            nbinsx: Math.min(70, Math.round(Math.sqrt(nSamples)))
+        },
+        {
+            x: xPDF, y: yPDF,
+            type: 'scatter', mode: 'lines',
+            name: 'Theoretical (non-central χ²)',
+            line: { color: '#7c3aed', width: 2.5 }
+        }
+    ];
+
+    const layout = {
+        height: 280,
+        margin: { t: 15, r: 20, b: 50, l: 65 },
+        xaxis: { title: 'r_T', tickformat: '.4f' },
+        yaxis: { title: 'Density' },
+        showlegend: true,
+        legend: { font: { size: 11 } },
+        plot_bgcolor: '#fafbff',
+        paper_bgcolor: 'white',
+        bargap: 0.04
+    };
+
+    document.getElementById('dist-card').style.display = '';
+    Plotly.react('dist-chart', traces, layout, { responsive: true });
+}
+
+// ── Debounce ──────────────────────────────────────────────────
+function debounce(fn, ms) {
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+const debouncedRender = debounce(render, 60);
+
+// ── Slider wiring ─────────────────────────────────────────────
+function bindSlider(id, lblId, paramKey, fmt) {
+    const el = document.getElementById(id);
+    const lb = document.getElementById(lblId);
+    el.addEventListener('input', () => {
+        params[paramKey] = parseFloat(el.value);
+        lb.textContent = fmt(params[paramKey]);
+        debouncedRender();
+    });
+}
+
+bindSlider('sl-kappa', 'lbl-kappa', 'kappa', v => v.toFixed(2));
+bindSlider('sl-theta', 'lbl-theta', 'theta', v => (v * 100).toFixed(2) + '%');
+bindSlider('sl-sigma', 'lbl-sigma', 'sigma', v => v.toFixed(3));
+bindSlider('sl-r0',    'lbl-r0',    'r0',    v => (v * 100).toFixed(2) + '%');
+bindSlider('sl-T',     'lbl-T',     'T',     v => v.toFixed(1));
+bindSlider('sl-n',     'lbl-n',     'N',     v => Math.round(v));
+bindSlider('sl-k',     'lbl-k',     'K',     v => Math.round(v));
+
+// ── Buttons ───────────────────────────────────────────────────
+document.getElementById('btn-resim').addEventListener('click', () => {
+    seed = (Date.now() ^ (Math.random() * 0xFFFFFF)) & 0x7fffffff;
+    axisRevision = Date.now();
+    render();
+});
+
+document.getElementById('btn-multi').addEventListener('click', () => {
+    multiMode = !multiMode;
+    const btn = document.getElementById('btn-multi');
+    btn.textContent = multiMode ? '× Hide K paths' : 'Show K paths';
+    btn.classList.toggle('btn-warning', multiMode);
+    btn.classList.toggle('btn-outline-light', !multiMode);
+    render();
+});
+
+document.getElementById('btn-slices').addEventListener('click', () => {
+    sliceMode = !sliceMode;
+    const btn = document.getElementById('btn-slices');
+    btn.textContent = sliceMode ? '× Hide Slices' : '⊞ Slice Dists.';
+    btn.classList.toggle('btn-info', sliceMode);
+    btn.classList.toggle('btn-outline-light', !sliceMode);
+    render();
+});
+
+document.getElementById('sel-slices').addEventListener('change', function () {
+    numSlices = parseInt(this.value);
+    render();
+});
+
+document.getElementById('btn-run-dist').addEventListener('click', runDistribution);
+
+// ── Central render ────────────────────────────────────────────
+function render() {
+    const { kappa, theta, sigma, r0, T, K } = params;
+    const N   = Math.round(params.N);
+    const rng = makeRng(seed);
+    const { t, r } = simulateCIR(kappa, theta, sigma, r0, T, N, rng);
+    currentT = t; currentR = r;
+
+    // Generate K paths when either fan-lines or slice mode needs them
+    let kPaths = [];
+    if (multiMode || sliceMode) {
+        for (let k = 0; k < K; k++) {
+            const r2 = makeRng(seed + k + 1);
+            const { r: rk } = simulateCIR(kappa, theta, sigma, r0, T, N, r2);
+            kPaths.push(rk);
+        }
+    }
+    currentKPaths     = kPaths;
+    currentExtraPaths = kPaths; // fan lines shown when array is non-empty and buildTraces sees it
+
+    const { shapes: pinShapes, annotations: pinAnn } = buildPinnedExtras();
+    const traces      = buildTraces(t, r, multiMode ? kPaths : []);
+    const sliceTraces = buildSliceTraces(kPaths);
+    const layout      = buildLayout(axisRevision, pinShapes, pinAnn);
+    Plotly.react('main-chart', [...traces, ...sliceTraces, ...buildPinnedTraces()], layout, plotlyConfig);
+
+    updateStats(r[N], kappa, theta, sigma, r0, T);
+    updateFeller(kappa, theta, sigma);
+    updatePinUI();
+}
+
+// ── Initial render ────────────────────────────────────────────
+render();
+
+// ── Pin / unpin on click ──────────────────────────────────────
+document.getElementById('main-chart').on('plotly_click', function(data) {
+    if (!data || !data.points || data.points.length === 0) return;
+    const t_clicked = data.points[0].x;
+    const tol = 1.5 * params.T / params.N;
+    const existingIdx = pinnedTs.findIndex(p => Math.abs(p - t_clicked) <= tol);
+    if (existingIdx >= 0) {
+        pinnedTs.splice(existingIdx, 1);
+    } else {
+        pinnedTs.push(t_clicked);
+        pinnedTs.sort((a, b) => a - b);
+    }
+    rerenderWithPins();
+});
+
+document.getElementById('btn-clear-pins').addEventListener('click', () => {
+    pinnedTs = [];
+    rerenderWithPins();
+});
+</script>
+</body>
+</html>

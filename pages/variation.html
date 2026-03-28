@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Total Variation &amp; Quadratic Variation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .param-badge { min-width: 52px; text-align: right; font-family: monospace; font-size: 0.85rem; }
+        .slider-row { display: flex; align-items: center; gap: 10px; }
+        .slider-row label { min-width: 130px; margin: 0; font-size: 0.9rem; }
+        .slider-row input[type=range] { flex: 1; }
+        .stat-row { display: flex; justify-content: space-between; padding: 4px 0;
+                    border-bottom: 1px dashed #dee2e6; font-size: 0.87rem; }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: #555; }
+        .stat-val { font-family: monospace; font-weight: 600; }
+        .formula-box { background: #f0fdf4; border-left: 4px solid #10b981;
+                       padding: 10px 14px; border-radius: 4px; font-family: 'Courier New', monospace;
+                       font-size: 0.82rem; line-height: 1.8; }
+        #basic-chart { min-height: 260px; }
+        #path-chart  { min-height: 360px; }
+        #incr-chart  { min-height: 210px; }
+        #conv-chart  { min-height: 290px; }
+        .nav-link.active-page { color: #06b6d4 !important; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────── -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="../index.html">Stochastic Visualizer</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="partitions.html">Partitions</a></li>
+                <li class="nav-item"><a class="nav-link" href="filtrations.html">Filtrations</a></li>
+                <li class="nav-item"><a class="nav-link" href="conditional-expectation.html">Conditional Expectation</a></li>
+                <li class="nav-item"><a class="nav-link" href="martingale.html">Martingale Properties</a></li>
+                <li class="nav-item"><a class="nav-link" href="binomial-model.html">Binomial Model</a></li>
+                <li class="nav-item"><a class="nav-link" href="ito-basic-process.html">Itô Integral</a></li>
+                <li class="nav-item"><a class="nav-link" href="cir-model.html">CIR Model</a></li>
+                <li class="nav-item"><a class="nav-link active-page" href="variation.html">Variation</a></li>
+                <li class="nav-item"><a class="nav-link" href="ou-sde.html">OU / Ex. 8.1</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Page header ───────────────────────────────────────── -->
+<div style="background: linear-gradient(135deg, #064e3b 0%, #10b981 100%); color:white; padding: 18px 0;">
+    <div class="container">
+        <h4 class="mb-1 fw-bold">Total Variation &amp; Quadratic Variation</h4>
+        <p class="mb-0 opacity-75" style="font-size:0.92rem;">
+            MATH 60646A HEC Montréal &nbsp;·&nbsp;
+            Smooth f(t) vs. Brownian W(t) as the partition n&nbsp;→&nbsp;∞
+        </p>
+    </div>
+</div>
+
+<!-- ── Main layout ───────────────────────────────────────── -->
+<div class="container-fluid py-3">
+<div class="row g-3">
+
+<!-- ── LEFT: charts ────────────────────────────────────── -->
+<div class="col-lg-8">
+
+    <!-- Basic walkthrough: f(t) = t -->
+    <div class="card mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+            <span style="font-size:0.88rem; font-weight:600;">
+                Step-by-step: &nbsp;<code>f(t) = t</code> &nbsp;with
+                <strong id="basic-hdr-n">10</strong> partition intervals
+            </span>
+            <div class="btn-group btn-group-sm">
+                <button id="btn-basic-tv" class="btn btn-primary btn-sm">TV view</button>
+                <button id="btn-basic-qv" class="btn btn-outline-secondary btn-sm">QV view</button>
+            </div>
+        </div>
+        <div class="card-body p-1">
+            <div id="basic-chart"></div>
+        </div>
+    </div>
+
+    <!-- Path chart -->
+    <div class="card mb-3">
+        <div class="card-header text-white d-flex justify-content-between align-items-center py-2"
+             style="background: linear-gradient(90deg,#064e3b,#10b981);">
+            <span>
+                Paths with n = <strong id="hdr-n">10</strong> partition intervals
+                &nbsp;·&nbsp; segments colored by increment magnitude
+            </span>
+            <button id="btn-resim" class="btn btn-sm btn-light fw-bold" style="color:#065f46;">⟳ New W(t)</button>
+        </div>
+        <div class="card-body p-1">
+            <div id="path-chart"></div>
+        </div>
+    </div>
+
+    <!-- Increment bar chart -->
+    <div class="card mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+            <span id="incr-title" style="font-size:0.88rem; font-weight:600;">
+                Absolute increments |Δf_i| — bars show each term in the TV sum
+            </span>
+            <div class="btn-group btn-group-sm">
+                <button id="btn-tv-mode" class="btn btn-success">|Δf_i| &nbsp;TV</button>
+                <button id="btn-qv-mode" class="btn btn-outline-secondary">Δf_i² &nbsp;QV</button>
+            </div>
+        </div>
+        <div class="card-body p-1">
+            <div id="incr-chart"></div>
+        </div>
+    </div>
+
+    <!-- Convergence chart -->
+    <div class="card mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+            <span style="font-size:0.88rem; font-weight:600;">
+                Convergence of TV_n and QV_n as partition size n increases
+            </span>
+            <div class="form-check form-switch mb-0 ms-2">
+                <input class="form-check-input" type="checkbox" id="chk-log">
+                <label class="form-check-label" for="chk-log" style="font-size:0.82rem;">Log scale</label>
+            </div>
+        </div>
+        <div class="card-body p-1">
+            <div id="conv-chart"></div>
+        </div>
+    </div>
+
+    <!-- Accordion explanations -->
+    <div class="accordion" id="explainAccordion">
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#collapseTV">
+                    <strong>Total Variation — definition and behavior</strong>
+                </button>
+            </h2>
+            <div id="collapseTV" class="accordion-collapse collapse" data-bs-parent="#explainAccordion">
+                <div class="accordion-body py-3" style="font-size:0.9rem;">
+                    <p>For a partition π_n = {t_0=0 &lt; t_1 &lt; ⋯ &lt; t_n=1}, the <strong>n-th order total variation</strong> is:</p>
+                    <div class="formula-box mb-3">
+                        TV_n(f) &nbsp;=&nbsp; Σᵢ₌₀ⁿ⁻¹ |f(t_{i+1}) − f(t_i)|
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <div class="p-2 rounded" style="background:#eff6ff; border-left:3px solid #2563eb;">
+                                <strong style="font-size:0.85rem;">Smooth functions</strong><br>
+                                <small>TV_n(f) → ∫₀¹ |f'(t)| dt &lt; ∞ as n → ∞.
+                                Each term |Δf_i| ≈ |f'(t_i)|·(1/n), so n terms of size 1/n → constant sum.
+                                The path has <em>bounded variation</em>.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-2 rounded" style="background:#fef2f2; border-left:3px solid #dc2626;">
+                                <strong style="font-size:0.85rem;">Brownian motion</strong><br>
+                                <small>TV_n(W) → +∞ a.s. Each increment |ΔW_i| ≈ √(1/n) in magnitude,
+                                so n terms of size 1/√n → TV_n ~ √n → ∞.
+                                BM has <em>unbounded variation</em> — the red curve diverges!</small>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mb-0 text-muted" style="font-size:0.82rem;">
+                        Unbounded variation of BM means the classical Riemann–Stieltjes integral ∫ f dW
+                        is not well-defined path-by-path. This is the core reason why Itô's construction is needed.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#collapseQV">
+                    <strong>Quadratic Variation — definition and behavior</strong>
+                </button>
+            </h2>
+            <div id="collapseQV" class="accordion-collapse collapse" data-bs-parent="#explainAccordion">
+                <div class="accordion-body py-3" style="font-size:0.9rem;">
+                    <p>The <strong>n-th order quadratic variation</strong> is:</p>
+                    <div class="formula-box mb-3">
+                        QV_n(f) &nbsp;=&nbsp; Σᵢ₌₀ⁿ⁻¹ (f(t_{i+1}) − f(t_i))²
+                    </div>
+                    <p>The <strong>quadratic variation process</strong> [f]_t is the limit as the mesh → 0:</p>
+                    <div class="formula-box mb-3">
+                        [f]_T &nbsp;=&nbsp; lim_{n→∞} QV_n(f)
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <div class="p-2 rounded" style="background:#eff6ff; border-left:3px solid #059669;">
+                                <strong style="font-size:0.85rem;">Smooth functions: [f]_T = 0</strong><br>
+                                <small>Each (Δf_i)² ≈ (1/n)², so n terms of size (1/n)² → sum ~ 1/n → 0.
+                                Switch to QV mode and watch the blue bars all shrink rapidly to zero as n grows.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-2 rounded" style="background:#fffbeb; border-left:3px solid #d97706;">
+                                <strong style="font-size:0.85rem;">Brownian motion: [W]_T = T = 1</strong><br>
+                                <small>Each (ΔW_i)² ≈ 1/n, so n terms each ~ 1/n → sum → 1 = T.
+                                Watch the orange QV_n(BM) line in the convergence chart stabilize near 1!</small>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mb-0"><strong>Intuition</strong>: BM increments scale as √Δt, not Δt. Squaring gives (√Δt)² = Δt,
+                    and summing n terms each of size Δt = 1/n gives T = 1. The squares don't vanish fast enough.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#collapseIto">
+                    <strong>Why [W]_T = T forces an Itô correction in calculus</strong>
+                </button>
+            </h2>
+            <div id="collapseIto" class="accordion-collapse collapse" data-bs-parent="#explainAccordion">
+                <div class="accordion-body py-3" style="font-size:0.9rem;">
+                    <p>In ordinary calculus, the second-order Taylor term <em>vanishes</em> because (dx)² → 0 for smooth paths:</p>
+                    <div class="formula-box mb-2">f(x_T) = f(x_0) + ∫₀ᵀ f'(x_t) dx_t &nbsp;&nbsp;[classical chain rule]</div>
+                    <p>For Brownian motion, <strong>(dW_t)² = dt ≠ 0</strong>, so the second-order term survives.
+                    Expanding f(W) via Taylor and collecting the surviving (dW)² term gives:</p>
+                    <div class="formula-box mb-2">
+                        f(W_T) = f(W_0) + ∫₀ᵀ f'(W_t) dW_t
+                                 + <span style="color:#10b981; font-weight:bold;">½ ∫₀ᵀ f''(W_t) dt</span>
+                        &nbsp;&nbsp;[Itô's formula]
+                    </div>
+                    <p>The green term is the <strong>Itô correction</strong> — it is exactly ½ times the quadratic
+                    variation density. Since [W]_t = t (so d[W]_t = dt), this extra term is unavoidable.</p>
+                    <p class="mb-0 p-2 rounded" style="background:#f0fdf4; border-left:3px solid #10b981;">
+                        <strong>Example:</strong> For f(x) = x², Itô gives:
+                        W_T² = 0 + ∫₀ᵀ 2W_t dW_t + ½·2·T,
+                        so W_T² = 2∫W_t dW_t + T.
+                        Classical calculus (wrong): W_T² = 2∫W_t dW_t — it's off by T!
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2" type="button"
+                        data-bs-toggle="collapse" data-bs-target="#collapseReading">
+                    <strong>Reading the charts — what to look for</strong>
+                </button>
+            </h2>
+            <div id="collapseReading" class="accordion-collapse collapse" data-bs-parent="#explainAccordion">
+                <div class="accordion-body py-3" style="font-size:0.9rem;">
+                    <ul class="mb-0">
+                        <li><strong>Path chart (top)</strong>: Interval segments are colored from <em>teal (small |Δ|)</em>
+                            to <em>red (large |Δ|)</em>. For smooth f, all segments are similar in size; for BM, sizes vary wildly.
+                            The partition dots show exactly which function values enter the sums.</li>
+                        <li><strong>Increment bars (middle)</strong>: Each bar is one term in the sum.
+                            Switch TV↔QV and drag n. Key observation: BM QV bars stay roughly the <em>same height</em>
+                            as n grows (each ≈1/n, and there are n of them → sum → 1),
+                            while smooth QV bars <em>shrink rapidly</em>.</li>
+                        <li><strong>Convergence chart (bottom)</strong>: The green cursor marks the current n.
+                            — Blue (TV smooth) settles at a finite value.
+                            — Red (TV BM) grows like √n — diverges.
+                            — Green dashed (QV smooth) collapses toward 0.
+                            — Orange dashed (QV BM) stabilizes near 1.
+                            Enable log scale to see the √n slope of TV(BM) as a straight line (slope ½).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /accordion -->
+</div><!-- /col-lg-8 -->
+
+<!-- ── RIGHT: controls ────────────────────────────────── -->
+<div class="col-lg-4">
+
+    <!-- Parameters card -->
+    <div class="card mb-3">
+        <div class="card-header text-white py-2" style="background:#064e3b;">
+            <strong>Parameters</strong>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label mb-1" style="font-size:0.9rem;">Smooth function f(t)</label>
+                <select id="sel-func" class="form-select form-select-sm">
+                    <option value="linear"  selected>f(t) = t &nbsp;(linear)</option>
+                    <option value="sine"           >f(t) = sin(πt) &nbsp;(one arch)</option>
+                    <option value="quad"           >f(t) = 4t(1−t) &nbsp;(parabola)</option>
+                    <option value="abssine"        >f(t) = |sin(2πt)| &nbsp;(two arches)</option>
+                    <option value="cubic"          >f(t) = t³ &nbsp;(cubic)</option>
+                </select>
+                <small class="text-muted d-block mt-1" id="func-tv-hint">TV∞ = 1 (exact)</small>
+            </div>
+            <div class="mb-3">
+                <div class="slider-row mb-1">
+                    <label>Partition size <em>n</em></label>
+                    <span class="badge param-badge" id="lbl-n" style="background:#10b981;">10</span>
+                </div>
+                <input type="range" class="form-range" id="sl-n" min="2" max="500" step="1" value="10">
+                <small class="text-muted">n intervals: t₀=0 &lt; t₁ &lt; … &lt; tₙ=1, uniform mesh 1/n</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live sums -->
+    <div class="card mb-3">
+        <div class="card-header py-2 text-white" style="background:#064e3b;">
+            <strong>Live Sums at current n</strong>
+        </div>
+        <div class="card-body py-2">
+            <div class="stat-row">
+                <span class="stat-label" style="color:#2563eb;">TV_n(smooth f)</span>
+                <span class="stat-val" style="color:#2563eb;" id="stat-tvS">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label" style="color:#2563eb; font-size:0.8rem;">TV∞(smooth) [exact]</span>
+                <span class="stat-val" style="color:#2563eb;" id="stat-tvSth">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label" style="color:#059669;">QV_n(smooth f)</span>
+                <span class="stat-val" style="color:#059669;" id="stat-qvS">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label" style="color:#059669; font-size:0.8rem;">QV∞(smooth) [exact]</span>
+                <span class="stat-val" style="color:#059669;">0</span>
+            </div>
+            <hr class="my-1">
+            <div class="stat-row">
+                <span class="stat-label" style="color:#dc2626;">TV_n(BM W)</span>
+                <span class="stat-val text-danger" id="stat-tvW">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label" style="color:#dc2626; font-size:0.8rem;">E[TV_n(W)] ≈ √(2n/π)</span>
+                <span class="stat-val text-danger" id="stat-tvWth">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label" style="color:#d97706;">QV_n(BM W)</span>
+                <span class="stat-val" style="color:#d97706;" id="stat-qvW">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label" style="color:#d97706; font-size:0.8rem;">QV∞(W) = T = 1</span>
+                <span class="stat-val" style="color:#d97706;">1.00000</span>
+            </div>
+            <hr class="my-1">
+            <div class="stat-row">
+                <span class="stat-label text-muted" style="font-size:0.78rem;">BM seed</span>
+                <span class="stat-val text-muted" style="font-size:0.78rem;" id="stat-seed">—</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick reference -->
+    <div class="card">
+        <div class="card-header py-2 bg-light">
+            <strong style="font-size:0.88rem;">Quick Reference</strong>
+        </div>
+        <div class="card-body py-2" style="font-size:0.82rem; color:#444;">
+            <p class="mb-1"><strong>TV_n(f):</strong><br>
+                Σ |Δf_i| &nbsp;→&nbsp; TV(smooth) &lt; ∞<br>
+                Σ |ΔW_i| &nbsp;→&nbsp; +∞ a.s., grows ~√n</p>
+            <p class="mb-1"><strong>QV_n(f):</strong><br>
+                Σ (Δf_i)² &nbsp;→&nbsp; 0 for smooth f<br>
+                Σ (ΔW_i)² &nbsp;→&nbsp; T = 1 a.s.</p>
+            <p class="mb-1"><strong>Key identity:</strong><br>
+                (dW_t)² = dt &nbsp;⟺&nbsp; [W]_t = t</p>
+            <p class="mb-0"><strong>Itô's formula:</strong><br>
+                df(W_t) = f'(W_t)dW_t + <span style="color:#10b981;">½f''(W_t)dt</span><br>
+                <span style="color:#10b981; font-size:0.78rem;">↑ extra term from [W]_t = t ≠ 0</span></p>
+        </div>
+    </div>
+</div><!-- /col-lg-4 -->
+
+</div><!-- /row -->
+</div><!-- /container-fluid -->
+
+<!-- ── Footer ─────────────────────────────────────────────── -->
+<footer class="bg-dark text-white py-3 mt-4">
+    <div class="container text-center">
+        <small class="text-muted">
+            Stochastic Calculus Visualizer · MATH 60646A HEC Montréal ·
+            Total Variation and Quadratic Variation of Smooth vs. Brownian Paths
+        </small>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ============================================================
+     ENGINE
+     ============================================================ -->
+<script>
+'use strict';
+
+// ── Smooth function catalogue ─────────────────────────────────
+const FUNCS = {
+    linear:  { label: 'f(t) = t',           fn: t => t,
+               tvExact: 1, hint: 'TV∞ = 1 (exact: ∫₀¹ 1 dt)' },
+    sine:    { label: 'f(t) = sin(πt)',     fn: t => Math.sin(Math.PI * t),
+               tvExact: 2, hint: 'TV∞ = 2 (goes 0 → 1 → 0, arc length)' },
+    quad:    { label: 'f(t) = 4t(1−t)',     fn: t => 4 * t * (1 - t),
+               tvExact: 2, hint: 'TV∞ = 2 (parabola up 1 then down 1)' },
+    abssine: { label: 'f(t) = |sin(2πt)|', fn: t => Math.abs(Math.sin(2 * Math.PI * t)),
+               tvExact: 4, hint: 'TV∞ = 4 (two full arches, each TV = 2)' },
+    cubic:   { label: 'f(t) = t³',          fn: t => t * t * t,
+               tvExact: 1, hint: 'TV∞ = 1 (monotone, TV = f(1)−f(0))' },
+};
+
+// ── State ─────────────────────────────────────────────────────
+let seed    = Date.now() & 0x7fffffff;
+let n_part  = 10;
+let funcKey = 'linear';
+let showQV  = false;
+let logScale = false;
+const N_BM  = 2000;  // fixed BM resolution
+
+let currentW  = null;   // Float64Array[N_BM+1]
+let convData  = null;   // precomputed convergence arrays
+
+// ── PRNG (mulberry32) ─────────────────────────────────────────
+function makeRng(s) {
+    let state = s >>> 0;
+    return function () {
+        state = (state + 0x6D2B79F5) >>> 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+function randn(rng) {
+    let u, v;
+    do { u = rng(); } while (u === 0);
+    do { v = rng(); } while (v === 0);
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function generateBM(N, rng) {
+    const W = new Float64Array(N + 1);
+    const sq = Math.sqrt(1.0 / N);
+    for (let i = 1; i <= N; i++) W[i] = W[i - 1] + randn(rng) * sq;
+    return W;
+}
+
+// ── Increment helpers ─────────────────────────────────────────
+function smoothIncrements(fn, n) {
+    const abs = new Float64Array(n), sq = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+        const df = fn((i + 1) / n) - fn(i / n);
+        abs[i] = Math.abs(df);
+        sq[i]  = df * df;
+    }
+    return { abs, sq,
+             tv: abs.reduce((a, b) => a + b, 0),
+             qv: sq.reduce((a, b) => a + b, 0) };
+}
+
+function bmIncrements(W, n) {
+    const abs = new Float64Array(n), sq = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+        const i0 = Math.round(i * N_BM / n);
+        const i1 = Math.min(Math.round((i + 1) * N_BM / n), N_BM);
+        const dw = W[i1] - W[i0];
+        abs[i] = Math.abs(dw);
+        sq[i]  = dw * dw;
+    }
+    return { abs, sq,
+             tv: abs.reduce((a, b) => a + b, 0),
+             qv: sq.reduce((a, b) => a + b, 0) };
+}
+
+// ── Precompute convergence data ───────────────────────────────
+// n = 2..100 (step 1) then 105..500 (step 5) → ~179 points
+function computeConv(fn, W) {
+    const ns = [], tvS = [], tvW = [], qvS = [], qvW = [];
+    function add(n) {
+        const si = smoothIncrements(fn, n);
+        const bi = bmIncrements(W, n);
+        ns.push(n); tvS.push(si.tv); tvW.push(bi.tv);
+        qvS.push(si.qv); qvW.push(bi.qv);
+    }
+    for (let n = 2; n <= 100; n++) add(n);
+    for (let n = 105; n <= 500; n += 5) add(n);
+    return { ns, tvS, tvW, qvS, qvW };
+}
+
+// ── Basic walkthrough chart (f(t) = t only) ───────────────────
+// Shows the staircase approximation with labeled increment steps
+// and secondary-axis bars for each term in the TV or QV sum.
+function renderBasicChart(n) {
+    const dt = 1 / n;
+    const qvSum = dt;   // n × (1/n)² = 1/n
+
+    // Full diagonal
+    const tLine = [0, 1], yLine = [0, 1];
+
+    // Staircase: for each interval go right then up
+    const stairX = [0], stairY = [0];
+    for (let i = 0; i < n; i++) {
+        stairX.push((i + 1) / n, (i + 1) / n);
+        stairY.push(i / n, (i + 1) / n);
+    }
+
+    // Partition points on the line
+    const ptX = Array.from({ length: n + 1 }, (_, i) => i / n);
+
+    // Bars: one per interval, height = |Δf| or (Δf)²
+    const xBars  = Array.from({ length: n }, (_, i) => (i + 0.5) / n);
+    const yBars  = Array.from({ length: n }, () => showQV ? dt * dt : dt);
+    const bColor = showQV ? 'rgba(5,150,105,0.68)'  : 'rgba(37,99,235,0.58)';
+    const bBord  = showQV ? '#047857'                : '#1e40af';
+    const bName  = showQV
+        ? `(Δf)² = (1/${n})² = ${(dt * dt).toFixed(6)} each`
+        : `|Δf| = 1/${n} = ${dt.toFixed(5)} each`;
+
+    const traces = [
+        { x: tLine, y: yLine, mode: 'lines', name: 'f(t) = t',
+          line: { color: '#2563eb', width: 3 },
+          hovertemplate: 'f(%{x:.3f}) = %{y:.3f}<extra>f(t)=t</extra>' },
+        { x: stairX, y: stairY, mode: 'lines', name: 'partition staircase',
+          line: { color: 'rgba(220,38,38,0.85)', width: 2.5, dash: 'dashdot' },
+          hoverinfo: 'skip' },
+        { x: ptX, y: ptX.slice(), mode: 'markers', name: 'partition points',
+          marker: { color: '#1e40af', size: 7, symbol: 'circle',
+                    line: { color: '#fff', width: 1 } },
+          hovertemplate: 'f(%{x:.4f}) = %{y:.4f}<extra>partition pt</extra>' },
+        { x: xBars, y: yBars, type: 'bar', name: bName, yaxis: 'y2',
+          marker: { color: bColor, line: { color: bBord, width: 0.5 } },
+          hovertemplate: (showQV ? '(Δf)²' : '|Δf|') + ' = %{y:.6f}<extra>contribution</extra>' }
+    ];
+
+    // Step-size labels on the vertical part of each staircase step
+    const annotations = [];
+    if (n <= 14) {
+        for (let i = 0; i < n; i++) {
+            annotations.push({
+                x: (i + 1) / n + (n <= 6 ? 0.025 : 0.012),
+                y: (i + 0.5) / n,
+                xref: 'x', yref: 'y',
+                text: `<b>${dt.toFixed(n <= 8 ? 3 : 4)}</b>`,
+                showarrow: false,
+                font: { size: n <= 8 ? 9 : 7.5, color: '#dc2626' },
+                xanchor: 'left', yanchor: 'middle',
+                bgcolor: 'rgba(255,255,255,0.72)'
+            });
+        }
+    }
+
+    // Live formula annotation at bottom
+    const sumText = showQV
+        ? `QV_n = Σᵢ (Δf)² = n×(1/n)² = ${n}×${(dt*dt).toFixed(6)} = 1/n = <b>${qvSum.toFixed(6)}</b>  ─→  0 as n→∞`
+        : `TV_n = Σᵢ |Δf| = n×(1/n) = ${n}×${dt.toFixed(5)} = <b>1.00000</b>  (the same for every n!)`;
+    annotations.push({
+        xref: 'paper', yref: 'paper', x: 0.5, y: -0.04,
+        xanchor: 'center', yanchor: 'top',
+        text: sumText,
+        showarrow: false,
+        font: { size: 10.5, color: '#1f2937', family: 'monospace' },
+        bgcolor: showQV ? 'rgba(240,253,244,0.92)' : 'rgba(239,246,255,0.92)',
+        bordercolor: showQV ? '#10b981' : '#3b82f6',
+        borderwidth: 1, borderpad: 5
+    });
+
+    const barMax = showQV ? Math.max(dt * dt * 1.6, 0.005) : Math.max(dt * 1.35, 0.05);
+
+    const shapes = n <= 30 ? ptX.slice(1, -1).map(t => ({
+        type: 'line', xref: 'x', yref: 'paper',
+        x0: t, x1: t, y0: 0, y1: 1,
+        line: { color: 'rgba(100,100,100,0.15)', width: 1, dash: 'dot' }
+    })) : [];
+
+    const layout = {
+        height: 265,
+        margin: { t: 8, r: 85, b: 68, l: 55 },
+        showlegend: true,
+        legend: { orientation: 'h', x: 0.5, xanchor: 'center',
+                  y: -0.60, yanchor: 'top', font: { size: 10 } },
+        xaxis: { title: 't', range: [-0.01, n <= 14 ? 1.11 : 1.03] },
+        yaxis: { title: 'f(t) = t', range: [-0.02, 1.12] },
+        yaxis2: { title: showQV ? '(Δf_i)²' : '|Δf_i|',
+                  overlaying: 'y', side: 'right',
+                  range: [0, barMax], showgrid: false,
+                  tickformat: showQV ? '.5f' : '.4f' },
+        plot_bgcolor: '#fafbff', paper_bgcolor: 'white',
+        hovermode: 'closest',
+        shapes, annotations
+    };
+
+    document.getElementById('basic-hdr-n').textContent = n;
+    Plotly.react('basic-chart', traces, layout, plotlyConfig);
+}
+
+// ── Path chart ────────────────────────────────────────────────
+// Two stacked subplots (grid coupled): smooth on top, BM on bottom.
+// Segments are colored teal→red by increment magnitude (for n ≤ 80).
+const plotlyConfig = { responsive: true, displayModeBar: false };
+
+function segmentColor(normMag) {
+    // teal (hsl 175) → amber (hsl 40) → red (hsl 0)
+    const h = Math.round(175 - 175 * normMag);
+    const s = 85, l = normMag > 0.6 ? 40 : 45;
+    return `hsl(${h},${s}%,${l}%)`;
+}
+
+function renderPathChart(fn, W, n, fnLabel) {
+    const ta = Array.from({ length: N_BM + 1 }, (_, i) => i / N_BM);
+    const fa = ta.map(t => fn(t));
+    const wa = Array.from(W);
+
+    // Partition endpoints
+    const tPart = [], fPart = [], wPart = [];
+    for (let i = 0; i <= n; i++) {
+        const idx = Math.min(Math.round(i * N_BM / n), N_BM);
+        tPart.push(ta[idx]);
+        fPart.push(fa[idx]);
+        wPart.push(wa[idx]);
+    }
+
+    const traces = [];
+
+    const USE_SEGS = n <= 80;
+
+    if (USE_SEGS) {
+        // Compute max increment magnitude for normalization
+        let maxS = 0, maxW = 0;
+        for (let i = 0; i < n; i++) {
+            maxS = Math.max(maxS, Math.abs(fPart[i + 1] - fPart[i]));
+            maxW = Math.max(maxW, Math.abs(wPart[i + 1] - wPart[i]));
+        }
+
+        // Colored segment traces (smooth function, top subplot yaxis='y')
+        for (let i = 0; i < n; i++) {
+            const i0 = Math.round(i * N_BM / n);
+            const i1 = Math.min(Math.round((i + 1) * N_BM / n), N_BM);
+            const norm = maxS > 0 ? Math.abs(fPart[i + 1] - fPart[i]) / maxS : 0;
+            traces.push({
+                x: ta.slice(i0, i1 + 1), y: fa.slice(i0, i1 + 1),
+                mode: 'lines', type: 'scatter', yaxis: 'y',
+                showlegend: false,
+                line: { color: segmentColor(norm), width: 2.5 },
+                hovertemplate: `|Δf| = ${Math.abs(fPart[i+1]-fPart[i]).toFixed(5)}<extra>interval ${i+1}</extra>`
+            });
+        }
+        // Colored segment traces (BM, bottom subplot yaxis='y2')
+        for (let i = 0; i < n; i++) {
+            const i0 = Math.round(i * N_BM / n);
+            const i1 = Math.min(Math.round((i + 1) * N_BM / n), N_BM);
+            const norm = maxW > 0 ? Math.abs(wPart[i + 1] - wPart[i]) / maxW : 0;
+            traces.push({
+                x: ta.slice(i0, i1 + 1), y: wa.slice(i0, i1 + 1),
+                mode: 'lines', type: 'scatter', yaxis: 'y2',
+                showlegend: false,
+                line: { color: segmentColor(norm), width: 2 },
+                hovertemplate: `|ΔW| = ${Math.abs(wPart[i+1]-wPart[i]).toFixed(5)}<extra>interval ${i+1}</extra>`
+            });
+        }
+    } else {
+        // Plain paths when n is large
+        traces.push({
+            x: ta, y: fa, mode: 'lines', type: 'scatter', yaxis: 'y',
+            name: fnLabel, line: { color: '#2563eb', width: 2 },
+            hovertemplate: 'f(%{x:.3f}) = %{y:.4f}<extra>smooth</extra>'
+        });
+        traces.push({
+            x: ta, y: wa, mode: 'lines', type: 'scatter', yaxis: 'y2',
+            name: 'W(t)', line: { color: '#dc2626', width: 1.5 },
+            hovertemplate: 'W(%{x:.3f}) = %{y:.4f}<extra>BM</extra>'
+        });
+    }
+
+    // Partition dots
+    const dotSz = n <= 30 ? 8 : n <= 80 ? 5 : 3.5;
+    const showDots = n <= 200;
+    if (showDots) {
+        traces.push({
+            x: tPart, y: fPart, mode: 'markers', type: 'scatter', yaxis: 'y',
+            name: fnLabel + ' partition', showlegend: !USE_SEGS,
+            marker: { color: '#1e40af', size: dotSz, symbol: 'circle',
+                      line: { color: '#fff', width: 1 } },
+            hovertemplate: 'f(%{x:.3f}) = %{y:.4f}<extra>partition pt</extra>'
+        });
+        traces.push({
+            x: tPart, y: wPart, mode: 'markers', type: 'scatter', yaxis: 'y2',
+            name: 'W(t) partition', showlegend: !USE_SEGS,
+            marker: { color: '#991b1b', size: dotSz, symbol: 'circle',
+                      line: { color: '#fff', width: 1 } },
+            hovertemplate: 'W(%{x:.3f}) = %{y:.4f}<extra>partition pt</extra>'
+        });
+    }
+
+    // Partition vertical lines (when few enough to be legible)
+    const shapes = [];
+    if (n <= 60) {
+        tPart.slice(1, -1).forEach(t => shapes.push({
+            type: 'line', xref: 'x', yref: 'paper',
+            x0: t, x1: t, y0: 0, y1: 1,
+            line: { color: 'rgba(75,85,99,0.20)', width: 1, dash: 'dot' }
+        }));
+    }
+
+    const layout = {
+        height: 360,
+        grid: { rows: 2, cols: 1, pattern: 'coupled', roworder: 'top to bottom' },
+        margin: { t: 10, r: 15, b: 40, l: 60 },
+        showlegend: false,
+        xaxis:  { title: '', showticklabels: false, range: [-0.01, 1.01] },
+        xaxis2: { title: 't', range: [-0.01, 1.01] },
+        yaxis:  { title: fnLabel, autorange: true },
+        yaxis2: { title: 'W(t) BM', autorange: true },
+        plot_bgcolor: '#fafbff',
+        paper_bgcolor: 'white',
+        hovermode: 'closest',
+        shapes,
+        annotations: [
+            { xref: 'paper', yref: 'paper', x: 0.01, y: 0.99,
+              xanchor: 'left', yanchor: 'top',
+              text: `<b style="color:#2563eb">${fnLabel}</b> — teal = small |Δf|, red = large |Δf|`,
+              showarrow: false, font: { size: 9.5 }, bgcolor: 'rgba(255,255,255,0.75)' },
+            { xref: 'paper', yref: 'paper', x: 0.01, y: 0.44,
+              xanchor: 'left', yanchor: 'top',
+              text: '<b style="color:#dc2626">W(t) Brownian motion</b> — teal = small |ΔW|, red = large |ΔW|',
+              showarrow: false, font: { size: 9.5 }, bgcolor: 'rgba(255,255,255,0.75)' }
+        ]
+    };
+
+    Plotly.react('path-chart', traces, layout, plotlyConfig);
+}
+
+// ── Increment bar chart ───────────────────────────────────────
+function renderIncrChart(fn, W, n) {
+    const si = smoothIncrements(fn, n);
+    const bi = bmIncrements(W, n);
+    const yS = Array.from(showQV ? si.sq : si.abs);
+    const yW = Array.from(showQV ? bi.sq : bi.abs);
+    const sumS = yS.reduce((a, b) => a + b, 0);
+    const sumW = yW.reduce((a, b) => a + b, 0);
+    const xMids = Array.from({ length: n }, (_, i) => (i + 0.5) / n);
+
+    const yLabel = showQV ? '(Δf_i)²' : '|Δf_i|';
+    const traces = [
+        {
+            x: xMids, y: yS, type: 'bar', name: `Smooth ${yLabel}`,
+            marker: { color: 'rgba(37,99,235,0.72)', line: { color: '#1e40af', width: 0.4 } },
+            hovertemplate: `${yLabel}[%{x:.3f}] = %{y:.6f}<extra>smooth</extra>`
+        },
+        {
+            x: xMids, y: yW, type: 'bar', name: `BM ${yLabel}`,
+            marker: { color: 'rgba(220,38,38,0.65)', line: { color: '#991b1b', width: 0.4 } },
+            hovertemplate: `${yLabel}[%{x:.3f}] = %{y:.6f}<extra>BM</extra>`
+        }
+    ];
+
+    const layout = {
+        height: 210,
+        barmode: 'group', bargap: 0.06, bargroupgap: 0.04,
+        margin: { t: 28, r: 15, b: 40, l: 68 },
+        showlegend: true,
+        legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.28,
+                  yanchor: 'top', font: { size: 11 } },
+        xaxis: { title: 't (interval midpoint)', tickformat: '.2f' },
+        yaxis: { title: yLabel, autorange: true },
+        plot_bgcolor: '#fafbff', paper_bgcolor: 'white',
+        annotations: [{
+            xref: 'paper', yref: 'paper', x: 0.5, y: 1.04,
+            xanchor: 'center', yanchor: 'bottom',
+            text: `Sum: smooth = <b>${sumS.toFixed(5)}</b> &nbsp;|&nbsp; BM = <b>${sumW.toFixed(5)}</b>`,
+            showarrow: false, font: { size: 10, color: '#374151', family: 'monospace' }
+        }]
+    };
+
+    Plotly.react('incr-chart', traces, layout, plotlyConfig);
+}
+
+// ── Convergence chart ─────────────────────────────────────────
+function renderConvChart(cd, n_curr) {
+    if (!cd) return;
+    const { ns, tvS, tvW, qvS, qvW } = cd;
+    const fn = FUNCS[funcKey];
+    const axType = logScale ? 'log' : 'linear';
+
+    // Theoretical E[TV_n(W)] ≈ √(2n/π)
+    const thTVBM = ns.map(n => Math.sqrt(2 * n / Math.PI));
+
+    const traces = [
+        { x: ns, y: tvS, name: 'TV_n(smooth)', mode: 'lines',
+          line: { color: '#2563eb', width: 2 },
+          hovertemplate: 'n=%{x}: TV=%{y:.5f}<extra>TV smooth</extra>' },
+        { x: ns, y: tvW, name: 'TV_n(W) BM', mode: 'lines',
+          line: { color: '#dc2626', width: 2 },
+          hovertemplate: 'n=%{x}: TV=%{y:.4f}<extra>TV BM</extra>' },
+        { x: ns, y: qvS, name: 'QV_n(smooth)', mode: 'lines',
+          line: { color: '#059669', width: 2, dash: 'dash' },
+          hovertemplate: 'n=%{x}: QV=%{y:.7f}<extra>QV smooth</extra>' },
+        { x: ns, y: qvW, name: 'QV_n(W) BM', mode: 'lines',
+          line: { color: '#d97706', width: 2, dash: 'dash' },
+          hovertemplate: 'n=%{x}: QV=%{y:.5f}<extra>QV BM</extra>' },
+        // Reference: exact TV∞(smooth)
+        { x: [ns[0], ns[ns.length - 1]], y: [fn.tvExact, fn.tvExact],
+          name: `TV∞(smooth) = ${fn.tvExact}`, mode: 'lines',
+          line: { color: 'rgba(37,99,235,0.35)', width: 1.5, dash: 'dot' },
+          hoverinfo: 'skip' },
+        // Reference: QV(BM) = 1
+        { x: [ns[0], ns[ns.length - 1]], y: [1, 1],
+          name: 'QV∞(W) = T = 1', mode: 'lines',
+          line: { color: 'rgba(217,119,6,0.45)', width: 1.5, dash: 'dot' },
+          hoverinfo: 'skip' },
+        // Reference: E[TV_n(W)] ~ √(2n/π)
+        { x: ns, y: thTVBM,
+          name: 'E[TV_n(W)] ≈ √(2n/π)', mode: 'lines',
+          line: { color: 'rgba(220,38,38,0.30)', width: 1, dash: 'dot' },
+          hoverinfo: 'skip' }
+    ];
+
+    // Green cursor at current n
+    const shapes = [{
+        type: 'line', xref: 'x', yref: 'paper',
+        x0: n_curr, x1: n_curr, y0: 0, y1: 1,
+        line: { color: 'rgba(16,185,129,0.85)', width: 2, dash: 'dash' }
+    }];
+    const annotations = [{
+        xref: 'x', yref: 'paper',
+        x: n_curr, y: 0.97,
+        xanchor: n_curr > 420 ? 'right' : 'left', yanchor: 'top',
+        text: `n = ${n_curr}`,
+        showarrow: false,
+        font: { color: '#059669', size: 10, family: 'monospace' },
+        bgcolor: 'rgba(255,255,255,0.88)',
+        bordercolor: 'rgba(16,185,129,0.6)',
+        borderwidth: 1, borderpad: 3
+    }];
+
+    const layout = {
+        height: 290,
+        margin: { t: 10, r: 20, b: 70, l: 65 },
+        showlegend: true,
+        legend: { orientation: 'h', x: 0.5, xanchor: 'center',
+                  y: -0.3, yanchor: 'top', font: { size: 10 } },
+        xaxis: { title: 'n (partition size)', type: axType },
+        yaxis: { title: 'Sum value', autorange: true, type: axType },
+        plot_bgcolor: '#fafbff', paper_bgcolor: 'white',
+        hovermode: 'x unified',
+        shapes, annotations
+    };
+
+    Plotly.react('conv-chart', traces, layout, plotlyConfig);
+}
+
+// ── Stats update ──────────────────────────────────────────────
+function updateStats(si, bi, n) {
+    const fn = FUNCS[funcKey];
+    document.getElementById('stat-tvS').textContent    = si.tv.toFixed(5);
+    document.getElementById('stat-tvSth').textContent  = fn.tvExact.toString();
+    document.getElementById('stat-qvS').textContent    = si.qv.toFixed(6);
+    document.getElementById('stat-tvW').textContent    = bi.tv.toFixed(5);
+    document.getElementById('stat-tvWth').textContent  = Math.sqrt(2 * n / Math.PI).toFixed(4);
+    document.getElementById('stat-qvW').textContent    = bi.qv.toFixed(5);
+    document.getElementById('stat-seed').textContent   = seed;
+    document.getElementById('lbl-n').textContent       = n;
+    document.getElementById('hdr-n').textContent       = n;
+    document.getElementById('func-tv-hint').textContent = fn.hint;
+}
+
+// ── Debounce ──────────────────────────────────────────────────
+function debounce(fn, ms) {
+    let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+// ── Full render (regenerates W + convergence data) ────────────
+function render() {
+    const fn = FUNCS[funcKey];
+    currentW = generateBM(N_BM, makeRng(seed));
+    convData = computeConv(fn.fn, currentW);
+
+    const si = smoothIncrements(fn.fn, n_part);
+    const bi = bmIncrements(currentW, n_part);
+
+    renderBasicChart(n_part);
+    renderPathChart(fn.fn, currentW, n_part, fn.label);
+    renderIncrChart(fn.fn, currentW, n_part);
+    renderConvChart(convData, n_part);
+    updateStats(si, bi, n_part);
+}
+
+// Lightweight re-render: only updates charts (no W regeneration)
+function renderLight() {
+    if (!currentW) return;
+    const fn = FUNCS[funcKey];
+    const si = smoothIncrements(fn.fn, n_part);
+    const bi = bmIncrements(currentW, n_part);
+
+    renderBasicChart(n_part);
+    renderPathChart(fn.fn, currentW, n_part, fn.label);
+    renderIncrChart(fn.fn, currentW, n_part);
+    renderConvChart(convData, n_part);
+    updateStats(si, bi, n_part);
+}
+
+const debouncedLight = debounce(renderLight, 40);
+const debouncedFull  = debounce(render, 60);
+
+// ── Controls ──────────────────────────────────────────────────
+document.getElementById('sl-n').addEventListener('input', function () {
+    n_part = parseInt(this.value);
+    debouncedLight();
+});
+
+document.getElementById('sel-func').addEventListener('change', function () {
+    funcKey = this.value;
+    debouncedFull();
+});
+
+document.getElementById('btn-resim').addEventListener('click', () => {
+    seed = (Date.now() ^ (Math.random() * 0xFFFFFF)) & 0x7fffffff;
+    render();
+});
+
+function setTVMode() {
+    showQV = false;
+    document.getElementById('btn-tv-mode').className   = 'btn btn-sm btn-success';
+    document.getElementById('btn-qv-mode').className   = 'btn btn-sm btn-outline-secondary';
+    document.getElementById('btn-basic-tv').className  = 'btn btn-sm btn-primary';
+    document.getElementById('btn-basic-qv').className  = 'btn btn-sm btn-outline-secondary';
+    document.getElementById('incr-title').textContent  =
+        'Absolute increments |Δf_i| — bars show each term in the TV sum';
+    renderBasicChart(n_part);
+    renderIncrChart(FUNCS[funcKey].fn, currentW, n_part);
+}
+function setQVMode() {
+    showQV = true;
+    document.getElementById('btn-qv-mode').className   = 'btn btn-sm btn-success';
+    document.getElementById('btn-tv-mode').className   = 'btn btn-sm btn-outline-secondary';
+    document.getElementById('btn-basic-qv').className  = 'btn btn-sm btn-primary';
+    document.getElementById('btn-basic-tv').className  = 'btn btn-sm btn-outline-secondary';
+    document.getElementById('incr-title').textContent  =
+        'Squared increments (Δf_i)² — bars show each term in the QV sum';
+    renderBasicChart(n_part);
+    renderIncrChart(FUNCS[funcKey].fn, currentW, n_part);
+}
+
+document.getElementById('btn-tv-mode').addEventListener('click',   () => { if (showQV)  setTVMode(); });
+document.getElementById('btn-qv-mode').addEventListener('click',   () => { if (!showQV) setQVMode(); });
+document.getElementById('btn-basic-tv').addEventListener('click',  () => { if (showQV)  setTVMode(); });
+document.getElementById('btn-basic-qv').addEventListener('click',  () => { if (!showQV) setQVMode(); });
+
+document.getElementById('chk-log').addEventListener('change', function () {
+    logScale = this.checked;
+    renderConvChart(convData, n_part);
+});
+
+// ── Initial render ────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>

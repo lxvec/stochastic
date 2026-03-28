@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discrete SDE — Euler–Maruyama</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .param-badge { min-width: 52px; text-align: right; font-family: monospace; font-size: 0.85rem; }
+        .slider-row  { display: flex; align-items: center; gap: 10px; }
+        .slider-row label { min-width: 130px; margin: 0; font-size: 0.9rem; }
+        .slider-row input[type=range] { flex: 1; }
+        .formula-box { background: #f8f9fc; border-left: 4px solid #3b82f6;
+                       padding: 10px 14px; border-radius: 4px; font-family: 'Courier New', monospace;
+                       font-size: 0.85rem; line-height: 2.0; }
+        .eq-line { display: block; }
+        .eq-dim  { opacity: 0.28; }
+        .stat-row { display: flex; justify-content: space-between; padding: 4px 0;
+                    border-bottom: 1px dashed #dee2e6; font-size: 0.87rem; }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: #555; }
+        .stat-val   { font-family: monospace; font-weight: 600; }
+        .nav-link.active-page { color: #06b6d4 !important; font-weight: 600; }
+        #path-chart { min-height: 300px; }
+        .tbl-wrap { max-height: 280px; overflow-y: auto; font-size: 0.82rem; }
+        .tbl-wrap table { margin-bottom: 0; }
+        .preset-btn { font-size: 0.78rem; padding: 3px 9px; }
+    </style>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────────── -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="../index.html">Stochastic Visualizer</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="filtrations.html">Filtrations</a></li>
+                <li class="nav-item"><a class="nav-link" href="conditional-expectation.html">Conditional Expectation</a></li>
+                <li class="nav-item"><a class="nav-link" href="martingale.html">Martingale Properties</a></li>
+                <li class="nav-item"><a class="nav-link" href="ito-basic-process.html">Itô Integral</a></li>
+                <li class="nav-item"><a class="nav-link" href="variation.html">Variation</a></li>
+                <li class="nav-item"><a class="nav-link" href="cir-model.html">CIR Model</a></li>
+                <li class="nav-item"><a class="nav-link" href="ou-sde.html">OU / Ex. 8.1</a></li>
+                <li class="nav-item"><a class="nav-link active-page" href="discrete_sde.html">Discrete SDE</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Page header ────────────────────────────────────────────── -->
+<div style="background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%); color:white; padding:18px 0;">
+    <div class="container">
+        <h4 class="mb-1 fw-bold">Discrete-Time SDE — Euler–Maruyama</h4>
+        <p class="mb-0 opacity-75" style="font-size:0.92rem;">
+            X<sub>t+Δt</sub> = X<sub>t</sub>
+            + κ(θ − X<sub>t</sub>)&thinsp;Δt
+            + σ(W<sub>t+Δt</sub> − W<sub>t</sub>)
+            &nbsp;·&nbsp; One path, step-by-step
+        </p>
+    </div>
+</div>
+
+<!-- ── Main layout ────────────────────────────────────────────── -->
+<div class="container-fluid py-3">
+<div class="row g-3">
+
+<!-- ── LEFT: equation + chart + table ────────────────────────── -->
+<div class="col-lg-8">
+
+    <!-- Equation card — toggles live in the header -->
+    <div class="card mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+            <span style="font-size:0.88rem; font-weight:600;">Discrete update equation</span>
+            <div class="d-flex gap-3">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="chk-drift" checked>
+                    <label class="form-check-label" for="chk-drift" style="font-size:0.82rem;">
+                        Drift
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="chk-diff" checked>
+                    <label class="form-check-label" for="chk-diff" style="font-size:0.82rem;">
+                        Diffusion
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-3">
+            <div class="formula-box">
+                <!-- symbolic -->
+                <span class="eq-line" id="eq-symbolic">
+                    X<sub>t+Δt</sub> &nbsp;=&nbsp; X<sub>t</sub>
+                    &nbsp;<span id="eq-drift-sym">+ κ(θ − X<sub>t</sub>)&thinsp;Δt</span>
+                    &nbsp;<span id="eq-diff-sym">+ σ(W<sub>t+Δt</sub> − W<sub>t</sub>)</span>
+                </span>
+                <!-- substituted -->
+                <span class="eq-line text-secondary" style="font-size:0.82rem;" id="eq-subst">
+                    &nbsp;&nbsp;=&nbsp; X<sub>t</sub>
+                    &nbsp;<span id="eq-drift-sub"></span>
+                    &nbsp;<span id="eq-diff-sub"></span>
+                </span>
+                <!-- simplified -->
+                <span class="eq-line text-secondary" style="font-size:0.82rem;" id="eq-simple">
+                    &nbsp;&nbsp;=&nbsp; X<sub>t</sub>
+                    &nbsp;<span id="eq-drift-simp"></span>
+                    &nbsp;<span id="eq-diff-simp"></span>
+                </span>
+            </div>
+            <div class="mt-2 text-muted" style="font-size:0.79rem;" id="eq-note"></div>
+        </div>
+    </div>
+
+    <!-- Path chart -->
+    <div class="card mb-3">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
+            <span style="font-size:0.88rem;">
+                Path of X<sub>t</sub> &nbsp;·&nbsp;
+                <small class="opacity-75">hover dot → value &nbsp;|&nbsp; hover line → slope</small>
+            </span>
+            <div class="d-flex align-items-center gap-3">
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="chk-overlay-drift">
+                    <label class="form-check-label text-white" for="chk-overlay-drift" style="font-size:0.80rem; opacity:0.9;">Drift only</label>
+                </div>
+                <div class="form-check form-switch mb-0">
+                    <input class="form-check-input" type="checkbox" id="chk-overlay-diff">
+                    <label class="form-check-label text-white" for="chk-overlay-diff" style="font-size:0.80rem; opacity:0.9;">Diffusion only</label>
+                </div>
+                <button id="btn-resim" class="btn btn-sm btn-light text-primary fw-bold">⟳ New W path</button>
+            </div>
+        </div>
+        <div class="card-body p-1">
+            <div id="path-chart"></div>
+        </div>
+    </div>
+
+    <!-- Step table -->
+    <div class="card mb-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+            <span style="font-size:0.88rem; font-weight:600;">Step-by-step breakdown</span>
+        </div>
+        <div class="card-body p-2">
+            <div class="tbl-wrap">
+                <table class="table table-sm table-bordered table-hover mb-0" id="step-table">
+                    <thead class="table-dark" style="position:sticky; top:0; z-index:1;">
+                        <tr>
+                            <th>t</th>
+                            <th>X<sub>t</sub></th>
+                            <th id="th-drift">Drift &nbsp;κ(θ−X<sub>t</sub>)Δt</th>
+                            <th id="th-diff">Diffusion &nbsp;σ(W<sub>t+Δt</sub>−W<sub>t</sub>)</th>
+                            <th>X<sub>t+Δt</sub></th>
+                        </tr>
+                    </thead>
+                    <tbody id="step-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /col-lg-8 -->
+
+<!-- ── RIGHT: controls ────────────────────────────────────────── -->
+<div class="col-lg-4">
+
+    <!-- Parameters -->
+    <div class="card mb-3">
+        <div class="card-header bg-dark text-white py-2">
+            <strong>Parameters</strong>
+        </div>
+        <div class="card-body py-2 px-3">
+
+            <div class="mb-3">
+                <div class="slider-row mb-1">
+                    <label>κ &nbsp;<small class="text-muted">(mean reversion)</small></label>
+                    <span class="badge bg-primary param-badge" id="lbl-kappa">1.00</span>
+                </div>
+                <input type="range" class="form-range" id="sl-kappa"
+                       min="-3" max="3" step="0.05" value="1">
+            </div>
+
+            <div class="mb-3">
+                <div class="slider-row mb-1">
+                    <label>θ &nbsp;<small class="text-muted">(long-run mean)</small></label>
+                    <span class="badge bg-primary param-badge" id="lbl-theta">1.00</span>
+                </div>
+                <input type="range" class="form-range" id="sl-theta"
+                       min="-3" max="5" step="0.1" value="1">
+            </div>
+
+            <div class="mb-3">
+                <div class="slider-row mb-1">
+                    <label>σ &nbsp;<small class="text-muted">(volatility)</small></label>
+                    <span class="badge bg-primary param-badge" id="lbl-sigma">1.00</span>
+                </div>
+                <input type="range" class="form-range" id="sl-sigma"
+                       min="0" max="3" step="0.05" value="1">
+            </div>
+
+            <div class="mb-3">
+                <div class="slider-row mb-1">
+                    <label>X₀ &nbsp;<small class="text-muted">(initial value)</small></label>
+                    <span class="badge bg-primary param-badge" id="lbl-x0">5.00</span>
+                </div>
+                <input type="range" class="form-range" id="sl-x0"
+                       min="-3" max="10" step="0.1" value="5">
+            </div>
+
+            <hr class="my-2">
+
+            <div class="mb-3">
+                <div class="slider-row mb-1">
+                    <label>Resolution level <em>k</em></label>
+                    <span class="badge bg-primary param-badge" id="lbl-level">2</span>
+                </div>
+                <input type="range" class="form-range" id="sl-level"
+                       min="0" max="12" step="1" value="2">
+                <small class="text-muted">Each step bisects all intervals (Brownian bridge)</small>
+            </div>
+
+            <div class="mb-1">
+                <div class="slider-row mb-1">
+                    <label>T &nbsp;<small class="text-muted">(time horizon)</small></label>
+                    <span class="badge bg-primary param-badge" id="lbl-T">3.5</span>
+                </div>
+                <input type="range" class="form-range" id="sl-T"
+                       min="0.5" max="20" step="0.5" value="3.5">
+            </div>
+
+            <div class="mt-2 p-2 rounded" style="background:#f1f5f9; font-size:0.82rem;" id="lbl-step-info">
+                N = 2² = 4 steps &nbsp;·&nbsp; Δt = 0.8750
+            </div>
+        </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="card mb-3">
+        <div class="card-header bg-secondary text-white py-2">
+            <strong>Presets (Ex. 8.1)</strong>
+        </div>
+        <div class="card-body py-2 px-3 d-flex flex-wrap gap-1">
+            <button class="btn btn-outline-secondary preset-btn" onclick="applyPreset(1,1,1,5,1,3.5)">Default</button>
+            <button class="btn btn-outline-secondary preset-btn" onclick="applyPreset(2,0,0.5,2,0.01,5)">8.1 (a)</button>
+            <button class="btn btn-outline-secondary preset-btn" onclick="applyPreset(1,2,1,0,0.01,5)">8.1 (b)</button>
+            <button class="btn btn-outline-secondary preset-btn" onclick="applyPreset(-1,1,0.5,1,0.01,5)">8.1 (c)</button>
+            <button class="btn btn-outline-secondary preset-btn" onclick="applyPreset(0,1,1,0,0.01,5)">8.1 (d)</button>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="card mb-3">
+        <div class="card-header py-2" style="background:#1e3a5f; color:white;">
+            <strong>Statistics</strong>
+        </div>
+        <div class="card-body py-2 px-3">
+            <div class="stat-row">
+                <span class="stat-label">Drift at X₀</span>
+                <span class="stat-val" id="st-drift0">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">SD of σ(W<sub>t+Δt</sub>−W<sub>t</sub>)</span>
+                <span class="stat-val" id="st-diffSD">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">E[X<sub>T</sub>] (theoretical)</span>
+                <span class="stat-val" id="st-EXT">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">X<sub>T</sub> (simulated)</span>
+                <span class="stat-val" id="st-simXT">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Steps N</span>
+                <span class="stat-val" id="st-N">—</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick reference -->
+    <div class="card">
+        <div class="card-header py-2 bg-light">
+            <strong style="font-size:0.88rem;">Quick Reference</strong>
+        </div>
+        <div class="card-body py-2 px-3" style="font-size:0.82rem; line-height:1.7;">
+            <p class="mb-1"><strong>Euler–Maruyama scheme:</strong></p>
+            <p class="mb-1">X<sub>t+Δt</sub> = X<sub>t</sub> + κ(θ−X<sub>t</sub>)Δt + σ(W<sub>t+Δt</sub>−W<sub>t</sub>)</p>
+            <p class="mb-1">W<sub>t+Δt</sub> − W<sub>t</sub> ~ N(0, Δt) i.i.d.</p>
+            <p class="mb-1"><strong>Slope on chart</strong> = (X<sub>t+Δt</sub> − X<sub>t</sub>) / Δt</p>
+            <p class="mb-1"><strong>κ &gt; 0</strong>: mean-reverting toward θ</p>
+            <p class="mb-1"><strong>κ &lt; 0</strong>: explosive (diverges from θ)</p>
+            <p class="mb-0"><strong>κ = 0</strong>: pure diffusion (random walk)</p>
+        </div>
+    </div>
+
+</div><!-- /col-lg-4 -->
+</div><!-- /row -->
+</div><!-- /container-fluid -->
+
+<!-- ── Footer ─────────────────────────────────────────────────── -->
+<footer class="bg-dark text-white py-3 mt-4">
+    <div class="container text-center">
+        <small class="text-muted">
+            Stochastic Calculus Visualizer · MATH 60646A HEC Montréal ·
+            Euler–Maruyama discrete-time SDE simulation
+        </small>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ── State ─────────────────────────────────────────────────────── */
+let p = { kappa: 1, theta: 1, sigma: 1, X0: 5, level: 2, T: 3.5 };
+const MAX_LEVEL    = 12;
+const MAX_BRIDGE_N = 1 << MAX_LEVEL;   // 4096 dyadic grid points
+let wBridge    = null;   // Float64Array[MAX_BRIDGE_N+1] — Lévy–Ciesielski BM
+let lockedYRange = null;
+
+const PC = { responsive: true, displayModeBar: false };
+
+/* ── PRNG (mulberry32) ──────────────────────────────────────────── */
+function makeRng(seed) {
+    let s = seed >>> 0;
+    return function () {
+        s += 0x6D2B79F5;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function randnFromRng(rng) {
+    // Box–Muller
+    const u = rng(), v = rng();
+    return Math.sqrt(-2 * Math.log(u + 1e-15)) * Math.cos(2 * Math.PI * v);
+}
+
+/* ── Brownian bridge (Lévy–Ciesielski) construction ────────────── */
+// Builds W on the full dyadic grid 0, T/MAX_N, 2T/MAX_N, …, T
+// Each refinement level l bisects all existing intervals using
+// the exact Brownian bridge conditional distribution:
+//   W(mid) = (W(left) + W(right))/2 + N(0, dt_l/4)
+function buildBridge(T, seed) {
+    const rng = makeRng(seed);
+    const W   = new Float64Array(MAX_BRIDGE_N + 1);
+    W[MAX_BRIDGE_N] = randnFromRng(rng) * Math.sqrt(T);   // W(T)
+    for (let l = 0; l < MAX_LEVEL; l++) {
+        const intervalIdx = MAX_BRIDGE_N >> l;   // array-index span of each interval
+        const halfIdx     = intervalIdx >> 1;
+        const std         = Math.sqrt(T / (4 << l)); // sqrt(dt_l / 4)
+        for (let k = 0, n = 1 << l; k < n; k++) {
+            const left  = k * intervalIdx;
+            const mid   = left + halfIdx;
+            const right = left + intervalIdx;
+            W[mid] = (W[left] + W[right]) * 0.5 + randnFromRng(rng) * std;
+        }
+    }
+    return W;
+}
+
+// Extract Brownian increments ΔW at a given refinement level
+function getDW(level) {
+    const N      = 1 << level;
+    const stride = MAX_BRIDGE_N >> level;
+    const dW     = new Float64Array(N);
+    for (let i = 0; i < N; i++)
+        dW[i] = wBridge[(i + 1) * stride] - wBridge[i * stride];
+    return dW;
+}
+
+/* ── Simulation ─────────────────────────────────────────────────── */
+// dW[i] already carries the correct sqrt(dt) scale from the bridge
+function simulatePath(kappa, theta, sigma, X0, dt, dW, N, useDrift, useDiff) {
+    const X = new Float64Array(N + 1);
+    X[0] = X0;
+    for (let i = 0; i < N; i++) {
+        const d = useDrift ? kappa * (theta - X[i]) * dt : 0;
+        const s = useDiff  ? sigma * dW[i] : 0;
+        X[i + 1] = X[i] + d + s;
+    }
+    return X;
+}
+
+/* ── Theoretical moments ────────────────────────────────────────── */
+function ouMean(t, kappa, theta, X0) {
+    if (Math.abs(kappa) < 1e-10) return X0;
+    return theta + (X0 - theta) * Math.exp(-kappa * t);
+}
+
+/* ── Equation display ────────────────────────────────────────────── */
+function updateEquation(dt) {
+    const { kappa, theta, sigma } = p;
+    const useDrift = document.getElementById('chk-drift').checked;
+    const useDiff  = document.getElementById('chk-diff').checked;
+
+    const dim = cls => `<span class="${cls ? 'eq-dim' : ''}">`;
+    const end = '</span>';
+
+    // Symbolic line — dim inactive terms
+    document.getElementById('eq-drift-sym').innerHTML =
+        `${dim(!useDrift)}+ κ(θ − X<sub>t</sub>)&thinsp;Δt${end}`;
+    document.getElementById('eq-diff-sym').innerHTML =
+        `${dim(!useDiff)}+ σ(W<sub>t+Δt</sub> − W<sub>t</sub>)${end}`;
+
+    // Substituted
+    document.getElementById('eq-drift-sub').innerHTML =
+        `${dim(!useDrift)}+ ${kappa.toFixed(2)}&thinsp;(${theta.toFixed(2)} − X<sub>t</sub>)&thinsp;&middot;&thinsp;${dt.toFixed(4)}${end}`;
+    document.getElementById('eq-diff-sub').innerHTML =
+        `${dim(!useDiff)}+ ${sigma.toFixed(2)}&thinsp;(W<sub>t+${dt.toFixed(4)}</sub>&thinsp;&minus;&thinsp;W<sub>t</sub>)${end}`;
+
+    // Simplified
+    const dCoeff = (kappa * dt).toFixed(5);
+    const sSD    = (sigma * Math.sqrt(dt)).toFixed(5);
+    document.getElementById('eq-drift-simp').innerHTML =
+        `${dim(!useDrift)}+ ${dCoeff}&thinsp;(${theta.toFixed(2)} − X<sub>t</sub>)${end}`;
+    document.getElementById('eq-diff-simp').innerHTML =
+        `${dim(!useDiff)}+ &sigma;&thinsp;&middot;&thinsp;(W<sub>t+&Delta;t</sub>&thinsp;&minus;&thinsp;W<sub>t</sub>)&ensp;<span style="color:#94a3b8; font-size:0.78rem;">~ N(0,&thinsp;&sigma;²&Delta;t&thinsp;=&thinsp;${(sigma*sigma*dt).toFixed(5)})</span>${end}`;
+
+    const N = 1 << p.level;
+    document.getElementById('eq-note').innerHTML =
+        `W<sub>t+Δt</sub> − W<sub>t</sub> ~ N(0, Δt) &nbsp;|&nbsp;
+         N = 2<sup>${p.level}</sup> = <strong>${N}</strong> steps &nbsp;|&nbsp;
+         SD of diffusion term = σ√Δt = <strong>${sSD}</strong>`;
+}
+
+/* ── Path chart ─────────────────────────────────────────────────── */
+function renderPathChart(ta, X, X0, theta, Z) {
+    const N = X.length - 1;
+    const showMarkers = N <= 80;
+    const dt = ta.length > 1 ? ta[1] - ta[0] : 1;
+    const mSize = Math.max(3, 8 - Math.floor(N / 15));
+
+    const trPath = {
+        x: ta, y: Array.from(X),
+        mode: showMarkers ? 'lines+markers' : 'lines',
+        name: 'Combined (drift + diffusion)',
+        line:   { color: '#1e40af', width: showMarkers ? 2 : 1.8 },
+        marker: { color: '#1e40af', size: mSize,
+                  symbol: 'circle', line: { color: '#fff', width: 1 } },
+        hovertemplate: 't = %{x:.4f},  X<sub>t</sub> = %{y:.5f}<extra></extra>'
+    };
+
+    // Invisible midpoint markers — hovering near a line segment shows
+    // slope plus the drift/diffusion decomposition of that step.
+    const useDrift = document.getElementById('chk-drift').checked;
+    const useDiff  = document.getElementById('chk-diff').checked;
+
+    function classifyMeanEffect(xNow, stepTerm) {
+        if (Math.abs(stepTerm) < 1e-12) return 'neutral';
+        if (Math.abs(xNow - p.theta) < 1e-12) return 'away from mean';
+        const distNow = Math.abs(xNow - p.theta);
+        const distAfter = Math.abs((xNow + stepTerm) - p.theta);
+        if (distAfter < distNow - 1e-12) return 'toward mean';
+        if (distAfter > distNow + 1e-12) return 'away from mean';
+        return 'neutral';
+    }
+
+    function classifyAlignment(driftEffect, diffEffect, driftTerm, diffTerm) {
+        if (!useDrift && !useDiff) return 'both terms off';
+        if (!useDrift) return `diffusion: ${diffEffect}`;
+        if (!useDiff) return `drift: ${driftEffect}`;
+        if (driftEffect === diffEffect) return `both: ${driftEffect}`;
+        if (driftEffect === 'neutral') return `diffusion: ${diffEffect}`;
+        if (diffEffect === 'neutral') return `drift: ${driftEffect}`;
+        if (Math.abs(driftTerm) > Math.abs(diffTerm)) {
+            return `oppose: drift dominates (${driftEffect})`;
+        }
+        if (Math.abs(diffTerm) > Math.abs(driftTerm)) {
+            return `oppose: diffusion dominates (${diffEffect})`;
+        }
+        return 'oppose: equal size';
+    }
+
+    const midX = [], midY = [], midStepData = [], midSummary = [];
+    for (let i = 0; i < N; i++) {
+        const driftTerm = useDrift ? p.kappa * (p.theta - X[i]) * dt : 0;
+        const diffTerm  = useDiff ? p.sigma * Z[i] : 0;
+        const netStep   = driftTerm + diffTerm;
+        const slope     = netStep / dt;
+        const driftEffect = classifyMeanEffect(X[i], driftTerm);
+        const diffEffect  = classifyMeanEffect(X[i], diffTerm);
+        const netEffect   = classifyMeanEffect(X[i], netStep);
+        const summary     = classifyAlignment(driftEffect, diffEffect, driftTerm, diffTerm);
+        midX.push((ta[i] + ta[i + 1]) / 2);
+        midY.push((X[i] + X[i + 1]) / 2);
+        midStepData.push([slope, driftTerm, diffTerm, netStep, driftEffect, diffEffect, netEffect]);
+        midSummary.push(summary);
+    }
+    const trSlopes = {
+        x: midX, y: midY,
+        customdata: midStepData,
+        text: midSummary,
+        mode: 'markers',
+        name: 'segment slope',
+        marker: { color: 'rgba(0,0,0,0)', size: 18 },
+        hovertemplate:
+            'slope = %{customdata[0]:.5f}<br>' +
+            'drift term = %{customdata[1]:.5f} <span style="color:#64748b;">(%{customdata[4]})</span><br>' +
+            'diffusion term = %{customdata[2]:.5f} <span style="color:#64748b;">(%{customdata[5]})</span><br>' +
+            'net ΔX = %{customdata[3]:.5f} <span style="color:#64748b;">(%{customdata[6]})</span><br>' +
+            '<span style="color:#64748b;">%{text}</span>' +
+            '<extra></extra>',
+        showlegend: false
+    };
+
+    const trTheta = {
+        x: [0, ta[ta.length - 1]], y: [theta, theta],
+        mode: 'lines', name: `θ = ${theta.toFixed(2)}`,
+        line: { color: '#ef4444', width: 2, dash: 'dot' },
+        hoverinfo: 'skip'
+    };
+
+    const trStart = {
+        x: [0], y: [X0],
+        mode: 'markers', name: `X₀ = ${X0.toFixed(2)}`,
+        marker: { color: '#16a34a', size: 10, symbol: 'diamond',
+                  line: { color: '#fff', width: 2 } },
+        hovertemplate: `X₀ = ${X0.toFixed(4)}<extra></extra>`
+    };
+
+    const traces = [trPath, trSlopes, trTheta, trStart];
+
+    // Optional overlays — computed with same Z values
+    const showDriftOnly = document.getElementById('chk-overlay-drift').checked;
+    const showDiffOnly  = document.getElementById('chk-overlay-diff').checked;
+
+    if (showDriftOnly && Z) {
+        const Xd = simulatePath(p.kappa, p.theta, p.sigma, X0, dt, Z, N, true, false);
+        traces.push({
+            x: ta, y: Array.from(Xd),
+            mode: showMarkers ? 'lines+markers' : 'lines',
+            name: 'Drift only',
+            line:   { color: 'rgba(6,182,212,0.55)', width: 1.5, dash: 'dash' },
+            marker: { color: 'rgba(6,182,212,0.65)', size: mSize - 1, symbol: 'circle-open' },
+            hovertemplate: 'Drift only: %{y:.5f}<extra></extra>'
+        });
+    }
+
+    if (showDiffOnly && Z) {
+        const Xs = simulatePath(p.kappa, p.theta, p.sigma, X0, dt, Z, N, false, true);
+        traces.push({
+            x: ta, y: Array.from(Xs),
+            mode: showMarkers ? 'lines+markers' : 'lines',
+            name: 'Diffusion only',
+            line:   { color: 'rgba(63,122,12,0.65)', width: 1.5, dash: 'dot' },
+            marker: { color: 'rgba(63,122,12,0.75)', size: mSize - 1, symbol: 'circle-open' },
+            hovertemplate: 'Diffusion only: %{y:.5f}<extra></extra>'
+        });
+    }
+
+    // Compute y range from ALL three paths (combined, drift-only, diffusion-only)
+    // regardless of whether overlays are toggled — so toggling never causes rescaling.
+    if (!lockedYRange && Z) {
+        const Xd = simulatePath(p.kappa, p.theta, p.sigma, X0, dt, Z, N, true,  false);
+        const Xs = simulatePath(p.kappa, p.theta, p.sigma, X0, dt, Z, N, false, true);
+        const allY = [
+            ...Array.from(X),
+            ...Array.from(Xd),
+            ...Array.from(Xs),
+            theta
+        ].filter(v => isFinite(v));
+        const yMin = Math.min(...allY);
+        const yMax = Math.max(...allY);
+        const pad  = Math.max((yMax - yMin) * 0.15, 0.5);
+        lockedYRange = [yMin - pad, yMax + pad];
+    }
+
+    const layout = {
+        height: 300,
+        margin: { t: 10, r: 20, b: 50, l: 65 },
+        showlegend: true,
+        legend: { orientation: 'h', x: 0.5, xanchor: 'center',
+                  y: -0.22, yanchor: 'top', font: { size: 11 } },
+        xaxis: { title: 't', range: [0, p.T], fixedrange: false },
+        yaxis: { title: 'X_t', range: lockedYRange, fixedrange: false },
+        plot_bgcolor: '#fafbff', paper_bgcolor: 'white',
+        hovermode: 'closest'
+    };
+
+    Plotly.react('path-chart', traces, layout, PC);
+}
+
+/* ── Step table ─────────────────────────────────────────────────── */
+function renderTable(ta, X, Z, useDrift, useDiff) {
+    const { kappa, theta, sigma, level, T } = p;
+    const dt = T / (1 << level);
+    const N = X.length - 1;
+    const tbody = document.getElementById('step-tbody');
+    const rows = [];
+    const maxRows = 200;
+    for (let i = 0; i < Math.min(N, maxRows); i++) {
+        const d = useDrift ? kappa * (theta - X[i]) * dt : 0;
+        const s = useDiff  ? sigma * Z[i] : 0;  // Z here is dW (bridge increments)
+        rows.push(
+            `<tr>
+               <td>${ta[i].toFixed(4)}</td>
+               <td>${X[i].toFixed(5)}</td>
+               <td class="${useDrift ? '' : 'text-muted'}">${d.toFixed(5)}</td>
+               <td class="${useDiff  ? '' : 'text-muted'}">${s.toFixed(5)}</td>
+               <td><strong>${X[i + 1].toFixed(5)}</strong></td>
+             </tr>`
+        );
+    }
+    if (N > maxRows) {
+        rows.push(`<tr><td colspan="5" class="text-center text-muted">… ${N - maxRows} more rows (reduce N to see all)</td></tr>`);
+    }
+    tbody.innerHTML = rows.join('');
+}
+
+/* ── Stats panel ────────────────────────────────────────────────── */
+function updateStats(X, dt) {
+    const { kappa, theta, sigma, X0, T } = p;
+    const driftAt0 = kappa * (theta - X0) * dt;
+    document.getElementById('st-drift0').textContent  = driftAt0.toFixed(5);
+    document.getElementById('st-diffSD').textContent  = (sigma * Math.sqrt(dt)).toFixed(5);
+    document.getElementById('st-EXT').textContent     = ouMean(T, kappa, theta, X0).toFixed(5);
+    document.getElementById('st-simXT').textContent   = X[X.length - 1].toFixed(5);
+    document.getElementById('st-N').textContent       = (X.length - 1);
+}
+
+function ensureBridge() {
+    if (!wBridge) wBridge = buildBridge(p.T, Date.now() & 0xFFFFFF);
+}
+
+/* ── Master render ───────────────────────────────────────────────── */
+function render() {
+    ensureBridge();
+    const { kappa, theta, sigma, X0, level, T } = p;
+    const N   = 1 << level;
+    const dt  = T / N;
+    const dW  = getDW(level);
+    const useDrift = document.getElementById('chk-drift').checked;
+    const useDiff  = document.getElementById('chk-diff').checked;
+
+    const ta = Array.from({ length: N + 1 }, (_, i) => i * dt);
+    const X  = simulatePath(kappa, theta, sigma, X0, dt, dW, N, useDrift, useDiff);
+
+    updateEquation(dt);
+    renderPathChart(ta, X, X0, theta, dW);
+    renderTable(ta, X, dW, useDrift, useDiff);
+    updateStats(X, dt);
+
+    document.getElementById('lbl-step-info').innerHTML =
+        `N = 2<sup>${level}</sup> = ${N} step${N === 1 ? '' : 's'} &nbsp;·&nbsp; Δt = ${dt.toFixed(4)}`;
+    document.getElementById('st-N').textContent = N;
+}
+
+const renderSameZ = render;
+
+/* ── Preset loader ───────────────────────────────────────────────── */
+function applyPreset(kappa, theta, sigma, X0, dt, T) {
+    // Convert the legacy dt hint to the nearest bisection level
+    const level = Math.max(0, Math.min(MAX_LEVEL, Math.round(Math.log2(T / dt))));
+    p = { kappa, theta, sigma, X0, level, T };
+    setSlider('sl-kappa', 'lbl-kappa', kappa, 2);
+    setSlider('sl-theta', 'lbl-theta', theta, 2);
+    setSlider('sl-sigma', 'lbl-sigma', sigma, 2);
+    setSlider('sl-x0',   'lbl-x0',   X0,    2);
+    document.getElementById('sl-level').value         = level;
+    document.getElementById('lbl-level').textContent  = level;
+    setSlider('sl-T', 'lbl-T', T, 1);
+    wBridge = null; lockedYRange = null;
+    render();
+}
+
+function setSlider(id, lblId, val, dec) {
+    document.getElementById(id).value = val;
+    document.getElementById(lblId).textContent = val.toFixed(dec);
+}
+
+/* ── Slider listeners ────────────────────────────────────────────── */
+document.getElementById('sl-kappa').addEventListener('input', function () {
+    p.kappa = parseFloat(this.value);
+    document.getElementById('lbl-kappa').textContent = p.kappa.toFixed(2);
+    lockedYRange = null; renderSameZ();
+});
+document.getElementById('sl-theta').addEventListener('input', function () {
+    p.theta = parseFloat(this.value);
+    document.getElementById('lbl-theta').textContent = p.theta.toFixed(2);
+    lockedYRange = null; renderSameZ();
+});
+document.getElementById('sl-sigma').addEventListener('input', function () {
+    p.sigma = parseFloat(this.value);
+    document.getElementById('lbl-sigma').textContent = p.sigma.toFixed(2);
+    lockedYRange = null; renderSameZ();
+});
+document.getElementById('sl-x0').addEventListener('input', function () {
+    p.X0 = parseFloat(this.value);
+    document.getElementById('lbl-x0').textContent = p.X0.toFixed(2);
+    lockedYRange = null; renderSameZ();
+});
+document.getElementById('sl-level').addEventListener('input', function () {
+    p.level = parseInt(this.value);
+    document.getElementById('lbl-level').textContent = p.level;
+    render();   // bridge unchanged; axes stay locked
+});
+document.getElementById('sl-T').addEventListener('input', function () {
+    p.T = parseFloat(this.value);
+    document.getElementById('lbl-T').textContent = p.T.toFixed(1);
+    wBridge = null; lockedYRange = null; render();  // T changes variance of bridge
+});
+
+document.getElementById('chk-drift').addEventListener('change', renderSameZ);
+document.getElementById('chk-diff').addEventListener('change',  renderSameZ);
+document.getElementById('chk-overlay-drift').addEventListener('change', renderSameZ);
+document.getElementById('chk-overlay-diff').addEventListener('change',  renderSameZ);
+
+document.getElementById('btn-resim').addEventListener('click', function () {
+    wBridge = null; lockedYRange = null;
+    render();
+});
+
+/* ── Boot ────────────────────────────────────────────────────────── */
+render();
+</script>
+</body>
+</html>

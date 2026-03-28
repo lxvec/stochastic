@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Itô Integral – Basic Process Visualizer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .param-badge { min-width: 52px; text-align: right; font-family: monospace; font-size: 0.85rem; }
+        .slider-row { display: flex; align-items: center; gap: 10px; }
+        .slider-row label { min-width: 130px; margin: 0; font-size: 0.9rem; }
+        .slider-row input[type=range] { flex: 1; }
+        .stat-row { display: flex; justify-content: space-between; padding: 4px 0;
+                    border-bottom: 1px dashed #dee2e6; font-size: 0.87rem; }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { color: #555; }
+        .stat-val { font-family: monospace; font-weight: 600; }
+        .regime-pill { display: inline-block; padding: 2px 8px; border-radius: 10px;
+                       font-size: 0.78rem; font-weight: 600; margin: 2px 0; }
+        #main-chart { min-height: 440px; cursor: crosshair; }
+        #dist-chart  { min-height: 260px; }
+        .pin-hint { font-size: 0.76rem; color: #888; text-align: center; margin-top: 3px; }
+        .formula-box { background: #f8f9fc; border-left: 4px solid #3b82f6;
+                       padding: 10px 14px; border-radius: 4px; font-family: 'Courier New', monospace;
+                       font-size: 0.82rem; line-height: 1.7; }
+        .section-divider { border-top: 2px solid #e9ecef; margin: 1.5rem 0; }
+        .nav-link.active-page { color: #06b6d4 !important; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────── -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="../index.html">Stochastic Visualizer</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="partitions.html">Partitions</a></li>
+                <li class="nav-item"><a class="nav-link" href="filtrations.html">Filtrations</a></li>
+                <li class="nav-item"><a class="nav-link" href="conditional-expectation.html">Conditional Expectation</a></li>
+                <li class="nav-item"><a class="nav-link" href="martingale.html">Martingale Properties</a></li>
+                <li class="nav-item"><a class="nav-link" href="binomial-model.html">Binomial Model</a></li>
+                <li class="nav-item"><a class="nav-link active-page" href="ito-basic-process.html">Itô Integral</a></li>
+                <li class="nav-item"><a class="nav-link" href="cir-model.html">CIR Model</a></li>
+                <li class="nav-item"><a class="nav-link" href="variation.html">Variation</a></li>
+                <li class="nav-item"><a class="nav-link" href="ou-sde.html">OU / Ex. 8.1</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Page header ───────────────────────────────────────── -->
+<div style="background: linear-gradient(135deg, #1e3a5f 0%, #3b82f6 100%); color:white; padding: 18px 0;">
+    <div class="container">
+        <h4 class="mb-1 fw-bold">Itô Integral — Basic Process (Lemma 1)</h4>
+        <p class="mb-0 opacity-75" style="font-size:0.92rem;">
+            Slide 19/79 · Gauthier, Dec 2024 · MATH 60646A HEC Montréal
+        </p>
+    </div>
+</div>
+
+<!-- ── Main layout ───────────────────────────────────────── -->
+<div class="container-fluid py-3">
+<div class="row g-3">
+
+    <!-- ── LEFT: chart area ────────────────────────────── -->
+    <div class="col-lg-8">
+
+        <!-- Primary chart card -->
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
+                <span>Path of a basic process and its stochastic integral w.r.t. Brownian motion</span>
+                <div class="d-flex gap-2 align-items-center">
+                    <button id="btn-clear-pins" class="btn btn-sm btn-warning fw-bold" style="display:none;">✕ Clear Pins</button>
+                    <button id="btn-multi" class="btn btn-sm btn-outline-light">Show K paths</button>
+                    <button id="btn-resim" class="btn btn-sm btn-light text-primary fw-bold">⟳ Resimulate</button>
+                </div>
+            </div>
+            <div class="card-body p-1">
+                <div id="main-chart"></div>
+                <div class="pin-hint">Click anywhere on the chart to pin coordinates for comparison · click a pinned marker again to unpin</div>
+            </div>
+        </div>
+
+        <!-- Distribution chart card (hidden until toggled) -->
+        <div class="card mb-3" id="dist-card" style="display:none;">
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center py-2">
+                <span>Distribution of I(1) = C·(W(b) − W(a)) across simulations</span>
+                <div class="d-flex align-items-center gap-2">
+                    <label class="text-white mb-0" style="font-size:0.85rem;">Samples:</label>
+                    <select id="sel-samples" class="form-select form-select-sm" style="width:90px;">
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                        <option value="1000" selected>1 000</option>
+                        <option value="5000">5 000</option>
+                    </select>
+                    <button id="btn-run-dist" class="btn btn-sm btn-light text-secondary fw-bold">Run</button>
+                </div>
+            </div>
+            <div class="card-body p-1">
+                <div id="dist-chart"></div>
+            </div>
+        </div>
+
+        <!-- Explanation accordion -->
+        <div class="accordion" id="explainAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseFormula">
+                        <strong>Formula &amp; Three-Regime Breakdown</strong>
+                    </button>
+                </h2>
+                <div id="collapseFormula" class="accordion-collapse collapse" data-bs-parent="#explainAccordion">
+                    <div class="accordion-body py-3">
+                        <div class="formula-box mb-3" id="formula-display">
+                            <!-- filled by JS -->
+                        </div>
+                        <div class="row g-2 mt-1">
+                            <div class="col-md-4">
+                                <div class="p-2 rounded" style="background:#e8f4fd; border-left:3px solid #3b82f6;">
+                                    <strong style="font-size:0.85rem;">Regime 1: t ≤ a</strong><br>
+                                    <small>X(t) = 0, so no integrand is active.
+                                    I(t) = 0 — the integral has not started accumulating.
+                                    The red line sits flat at zero.</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2 rounded" style="background:#fef9e7; border-left:3px solid #f39c12;">
+                                    <strong style="font-size:0.85rem;">Regime 2: a &lt; t ≤ b</strong><br>
+                                    <small>X(t) = C (active). I(t) = C·(W(t) − W(a)).
+                                    The red line tracks the Brownian path, scaled by C and re-anchored at W(a).</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="p-2 rounded" style="background:#eafaf1; border-left:3px solid #2ecc71;">
+                                    <strong style="font-size:0.85rem;">Regime 3: t &gt; b</strong><br>
+                                    <small>X(t) = 0 again. I(t) = C·(W(b) − W(a)) — frozen.
+                                    The red line goes perfectly horizontal. The integral "knows" nothing after b.</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button collapsed py-2" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseMartingale">
+                        <strong>Why I(t) is a Martingale (Lemma 1)</strong>
+                    </button>
+                </h2>
+                <div id="collapseMartingale" class="accordion-collapse collapse" data-bs-parent="#explainAccordion">
+                    <div class="accordion-body py-3" style="font-size:0.9rem;">
+                        <p>A process M(t) is a martingale if E[M(t) | F<sub>s</sub>] = M(s) for s ≤ t.
+                        For I(t) = C·(W(t∧b) − W(a)):</p>
+                        <ul>
+                            <li><strong>E[I(T)] = 0</strong> always, because C is F<sub>a</sub>-measurable and
+                                W(b) − W(a) is independent of F<sub>a</sub> with mean 0.</li>
+                            <li><strong>Var[I(T)] = C²·(b − a)</strong> — the Itô isometry
+                                ‖∫ X dW‖² = ‖X‖²<sub>L²</sub> = E[∫ X² dt] = C²·(b−a).</li>
+                            <li>After time b, I(t) is constant → its conditional expectation given any
+                                later information is just itself. <em>No drift after the interval closes.</em></li>
+                        </ul>
+                        <p class="mb-0 text-muted" style="font-size:0.82rem;">
+                            Use the <strong>Show K paths</strong> button above and then <strong>Run</strong>
+                            the distribution chart to verify these facts empirically.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── RIGHT: controls ─────────────────────────────── -->
+    <div class="col-lg-4">
+
+        <!-- Parameter sliders -->
+        <div class="card mb-3">
+            <div class="card-header bg-dark text-white py-2">
+                <strong>Basic Process Parameters</strong>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="slider-row mb-1">
+                        <label>Interval start <em>a</em></label>
+                        <span class="badge bg-primary param-badge" id="lbl-a">0.30</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-a" min="0.00" max="0.94" step="0.01" value="0.30">
+                </div>
+                <div class="mb-3">
+                    <div class="slider-row mb-1">
+                        <label>Interval end <em>b</em></label>
+                        <span class="badge bg-primary param-badge" id="lbl-b">0.70</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-b" min="0.01" max="1.00" step="0.01" value="0.70">
+                </div>
+                <div class="mb-3">
+                    <div class="slider-row mb-1">
+                        <label>Amplitude <em>C</em></label>
+                        <span class="badge bg-primary param-badge" id="lbl-c">1.0</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-c" min="-3.0" max="3.0" step="0.1" value="1.0">
+                </div>
+                <div class="mb-1">
+                    <div class="slider-row mb-1">
+                        <label>Grid steps <em>N</em></label>
+                        <span class="badge bg-secondary param-badge" id="lbl-n">1000</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-n" min="10" max="3000" step="10" value="1000">
+                </div>
+                <small class="text-muted">N controls Brownian path resolution. Changing N regenerates W with the same seed.</small>
+            </div>
+        </div>
+
+        <!-- Multi-path -->
+        <div class="card mb-3">
+            <div class="card-header bg-secondary text-white py-2">
+                <strong>Multi-Path Options</strong>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="slider-row mb-1">
+                        <label>Paths shown <em>K</em></label>
+                        <span class="badge bg-secondary param-badge" id="lbl-k">10</span>
+                    </div>
+                    <input type="range" class="form-range" id="sl-k" min="1" max="50" step="1" value="10">
+                </div>
+                <p class="text-muted mb-0" style="font-size:0.82rem;">
+                    When K-paths mode is on, <em>K</em> independent I(t) paths are overlaid in orange.
+                    Notice: all start at 0 for t ≤ a, diverge during (a,b], and freeze after b.
+                </p>
+            </div>
+        </div>
+
+        <!-- Live stats -->
+        <div class="card mb-3">
+            <div class="card-header py-2" style="background:#1e3a5f; color:white;">
+                <strong>Live Statistics</strong>
+            </div>
+            <div class="card-body py-2">
+                <div class="stat-row">
+                    <span class="stat-label">Realized I(1)</span>
+                    <span class="stat-val text-danger" id="stat-it">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Theoretical E[I(1)]</span>
+                    <span class="stat-val">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Theoretical Var[I(1)]</span>
+                    <span class="stat-val text-primary" id="stat-var">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Theoretical Std[I(1)]</span>
+                    <span class="stat-val text-primary" id="stat-std">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">W(b) − W(a)</span>
+                    <span class="stat-val" id="stat-dw">—</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Interval length (b−a)</span>
+                    <span class="stat-val" id="stat-len">—</span>
+                </div>
+                <hr class="my-2">
+                <div class="stat-row">
+                    <span class="stat-label text-muted" style="font-size:0.78rem;">Seed</span>
+                    <span class="stat-val text-muted" style="font-size:0.78rem;" id="stat-seed">—</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick-ref -->
+        <div class="card">
+            <div class="card-header py-2 bg-light">
+                <strong style="font-size:0.88rem;">Quick Reference</strong>
+            </div>
+            <div class="card-body py-2" style="font-size:0.82rem; color:#444;">
+                <p class="mb-1"><strong>Definition</strong> (basic process):<br>
+                    X(t) = C · <strong>1</strong><sub>(a,b]</sub>(t),  where C is F<sub>a</sub>-measurable</p>
+                <p class="mb-1"><strong>Stochastic integral</strong>:<br>
+                    I(t) = ∫₀ᵗ X(s) dW(s) = C · (W(t∧b) − W(a))</p>
+                <p class="mb-0"><strong>Isometry</strong>:<br>
+                    E[I(1)²] = E[∫₀¹ X(t)² dt] = C²·(b−a)</p>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /row -->
+</div><!-- /container -->
+
+<!-- ── Footer ─────────────────────────────────────────────── -->
+<footer class="bg-dark text-white py-3 mt-4">
+    <div class="container text-center">
+        <small class="text-muted">
+            Stochastic Calculus Visualizer · MATH 60646A HEC Montréal ·
+            Based on slide 19/79 of <em>Gauthier, Itô's Integral, Dec 2024</em>
+        </small>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- ============================================================
+     SIMULATION ENGINE
+     ============================================================ -->
+<script>
+'use strict';
+
+// ── State ─────────────────────────────────────────────────────
+let seed = Date.now() & 0x7fffffff;
+let params = { a: 0.30, b: 0.70, C: 1.0, N: 1000, K: 10 };
+let currentT = null, currentW = null, currentI = null;
+let currentExtraIPaths = [];
+let pinnedTs = [];
+let multiMode = false;
+let axisRevision = 'stable'; // changes only on Resimulate to force axis reset
+
+// ── Seeded PRNG (mulberry32) ──────────────────────────────────
+function makeRng(s) {
+    let state = s >>> 0;
+    return function () {
+        state = (state + 0x6D2B79F5) >>> 0;
+        let t = Math.imul(state ^ (state >>> 15), 1 | state);
+        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function randn(rng) {
+    let u, v;
+    do { u = rng(); } while (u === 0);
+    do { v = rng(); } while (v === 0);
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ── Generate a Brownian motion path ──────────────────────────
+function generateBM(N, rng) {
+    const dt = 1.0 / N;
+    const sqDt = Math.sqrt(dt);
+    const t = new Float64Array(N + 1);
+    const W = new Float64Array(N + 1);
+    for (let i = 1; i <= N; i++) {
+        t[i] = i / N;
+        W[i] = W[i - 1] + randn(rng) * sqDt;
+    }
+    return { t, W };
+}
+
+// ── Compute X(t) and I(t) given a BM path ────────────────────
+function computeXI(t, W, a, b, C) {
+    const N = t.length - 1;
+    const aIdx = Math.min(Math.round(a * N), N);
+    const bIdx = Math.min(Math.round(b * N), N);
+    const Wa = W[aIdx];
+    const Wb = W[bIdx];
+    const IT = C * (Wb - Wa);
+
+    const I = new Float64Array(N + 1);
+    for (let i = 0; i <= N; i++) {
+        const ti = t[i];
+        if (ti <= a)      I[i] = 0;
+        else if (ti <= b) I[i] = C * (W[i] - Wa);
+        else              I[i] = IT;
+    }
+    return { I, Wa, Wb, IT };
+}
+
+// ── Build Plotly traces ────────────────────────────────────────
+function buildTraces(t, W, I, a, b, C, extraIPaths) {
+    const ta = Array.from(t);
+
+    // W(t) - green, thin
+    const trW = {
+        x: ta, y: Array.from(W),
+        name: 'W(t) — Brownian motion',
+        mode: 'lines',
+        line: { color: '#27ae60', width: 1.5 },
+        hovertemplate: 'W(%{x:.3f}) = %{y:.4f}<extra></extra>'
+    };
+
+    // X(t) - blue, thick step function (explicit corner points)
+    const xStepT = [0, a, a, b, b, 1];
+    const xStepY = [0, 0, C, C, 0, 0];
+    const trX = {
+        x: xStepT, y: xStepY,
+        name: `X(t) = ${C.toFixed(1)}·1<sub>(${a.toFixed(2)},${b.toFixed(2)}]</sub>`,
+        mode: 'lines',
+        line: { color: '#2563eb', width: 3 },
+        hovertemplate: 'X(%{x:.3f}) = %{y:.4f}<extra></extra>'
+    };
+
+    // I(t) - red
+    const trI = {
+        x: ta, y: Array.from(I),
+        name: 'I(t) = ∫₀ᵗ X dW',
+        mode: 'lines',
+        line: { color: '#e74c3c', width: 2 },
+        hovertemplate: 'I(%{x:.3f}) = %{y:.4f}<extra></extra>'
+    };
+
+    const traces = [];
+
+    // Extra I(t) paths (K-paths mode)
+    if (extraIPaths && extraIPaths.length > 0) {
+        const alpha = Math.max(0.15, 0.6 - extraIPaths.length * 0.01);
+        extraIPaths.forEach((Ik, idx) => {
+            traces.push({
+                x: ta, y: Array.from(Ik),
+                name: idx === 0 ? `${extraIPaths.length} I(t) paths` : '',
+                showlegend: idx === 0,
+                mode: 'lines',
+                line: { color: `rgba(230, 126, 34, ${alpha})`, width: 1 },
+                hoverinfo: 'skip'
+            });
+        });
+    }
+
+    traces.push(trW, trX, trI);
+    return traces;
+}
+
+function buildLayout(a, b, C, uirev, extraShapes = [], extraAnnotations = []) {
+    return {
+        height: 440,
+        margin: { t: 20, r: 20, b: 90, l: 50 },
+        showlegend: true,
+        legend: {
+            orientation: 'h',
+            x: 0.5, xanchor: 'center',
+            y: -0.22, yanchor: 'top',
+            font: { size: 11 },
+            bgcolor: 'rgba(255,255,255,0)',
+        },
+        uirevision: uirev,
+        xaxis: { title: 't', range: [-0.01, 1.01],
+                 tickvals: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0] },
+        yaxis: { title: 'Value', autorange: true },
+        plot_bgcolor: '#fafbff',
+        paper_bgcolor: 'white',
+        hovermode: 'x unified',
+        shapes: [
+            // Shaded active interval (a, b]
+            { type: 'rect', xref: 'x', yref: 'paper',
+              x0: a, x1: b, y0: 0, y1: 1,
+              fillcolor: 'rgba(37, 99, 235, 0.07)', line: { width: 0 } },
+            // Dashed vertical at a
+            { type: 'line', xref: 'x', yref: 'paper',
+              x0: a, x1: a, y0: 0, y1: 1,
+              line: { color: 'rgba(37,99,235,0.5)', width: 1.5, dash: 'dash' } },
+            // Dashed vertical at b
+            { type: 'line', xref: 'x', yref: 'paper',
+              x0: b, x1: b, y0: 0, y1: 1,
+              line: { color: 'rgba(37,99,235,0.5)', width: 1.5, dash: 'dash' } },
+            ...extraShapes
+        ],
+        annotations: [
+            { xref: 'x', yref: 'paper', x: a, y: 1.04, text: '<b>a</b>',
+              showarrow: false, font: { color: '#2563eb', size: 12 } },
+            { xref: 'x', yref: 'paper', x: b, y: 1.04, text: '<b>b</b>',
+              showarrow: false, font: { color: '#2563eb', size: 12 } },
+            ...extraAnnotations
+        ]
+    };
+}
+
+// ── Pinned-point helpers ───────────────────────────────────────
+function buildPinnedTraces() {
+    if (pinnedTs.length === 0 || !currentT) return [];
+    const N = currentT.length - 1;
+    const { a, b, C } = params;
+
+    const tPts = [], wPts = [], xPts = [], iPts = [];
+    pinnedTs.forEach(tVal => {
+        const idx = Math.min(Math.round(tVal * N), N);
+        const t_act = currentT[idx];
+        tPts.push(t_act);
+        wPts.push(currentW[idx]);
+        xPts.push((t_act > a && t_act <= b) ? C : 0);
+        iPts.push(currentI[idx]);
+    });
+
+    const mkTrace = (yArr, color, label) => ({
+        x: tPts, y: yArr,
+        mode: 'markers', type: 'scatter',
+        name: label, showlegend: false,
+        marker: { symbol: 'circle', size: 11, color: color,
+                  line: { color: '#fff', width: 2 } },
+        hovertemplate: label + '(%{x:.3f}) = %{y:.4f}<extra>📌 click to unpin</extra>',
+    });
+
+    return [
+        mkTrace(wPts, '#27ae60', 'W'),
+        mkTrace(xPts, '#2563eb', 'X'),
+        mkTrace(iPts, '#e74c3c', 'I'),
+    ];
+}
+
+function buildPinnedExtras() {
+    if (pinnedTs.length === 0 || !currentT) return { shapes: [], annotations: [] };
+    const N = currentT.length - 1;
+    const { a, b, C } = params;
+    const shapes = [], annotations = [];
+
+    pinnedTs.forEach((tVal, k) => {
+        const idx = Math.min(Math.round(tVal * N), N);
+        const t_act = currentT[idx];
+        const w_val = currentW[idx];
+        const x_val = (t_act > a && t_act <= b) ? C : 0;
+        const i_val = currentI[idx];
+
+        shapes.push({
+            type: 'line', xref: 'x', yref: 'paper',
+            x0: t_act, x1: t_act, y0: 0, y1: 1,
+            line: { color: 'rgba(255,140,0,0.65)', width: 1.5, dash: 'dot' }
+        });
+
+        // Alternate label height so overlapping pins stay readable
+        const yAnchor = (k % 2 === 0) ? 0.99 : 0.72;
+        const xAnchor = t_act > 0.78 ? 'right' : 'left';
+        annotations.push({
+            xref: 'x', yref: 'paper',
+            x: t_act, y: yAnchor,
+            xanchor: xAnchor, yanchor: 'top',
+            text: `<b>t = ${t_act.toFixed(3)}</b><br>` +
+                  `<span style="color:#27ae60">W = ${w_val.toFixed(4)}</span><br>` +
+                  `<span style="color:#2563eb">X = ${x_val.toFixed(4)}</span><br>` +
+                  `<span style="color:#e74c3c">I = ${i_val.toFixed(4)}</span>`,
+            showarrow: false,
+            bgcolor: 'rgba(255,255,255,0.92)',
+            bordercolor: 'rgba(255,140,0,0.8)',
+            borderwidth: 1, borderpad: 5,
+            font: { size: 9.5, family: 'monospace' },
+            align: 'left',
+        });
+    });
+
+    return { shapes, annotations };
+}
+
+function updatePinUI() {
+    const btn = document.getElementById('btn-clear-pins');
+    if (pinnedTs.length > 0) {
+        btn.style.display = '';
+        btn.textContent = `✕ Clear ${pinnedTs.length} Pin${pinnedTs.length > 1 ? 's' : ''}`;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function rerenderWithPins() {
+    if (!currentT) return;
+    const { a, b, C } = params;
+    const { shapes: pinShapes, annotations: pinAnn } = buildPinnedExtras();
+    const layout = buildLayout(a, b, C, axisRevision, pinShapes, pinAnn);
+    const baseTraces = buildTraces(currentT, currentW, currentI, a, b, C, currentExtraIPaths);
+    Plotly.react('main-chart', [...baseTraces, ...buildPinnedTraces()], layout, plotlyConfig);
+    updatePinUI();
+}
+
+const plotlyConfig = {
+    responsive: true,
+    displayModeBar: true,
+    modeBarButtonsToRemove: ['select2d', 'lasso2d'],
+    toImageButtonOptions: { filename: 'ito_basic_process', scale: 2 }
+};
+
+// ── Central render function ───────────────────────────────────
+function render() {
+    const { a, b, C, K } = params;
+    const N = Math.round(params.N);
+    const rng = makeRng(seed);
+    const { t, W } = generateBM(N, rng);
+    currentT = t; currentW = W;
+
+    const { I, Wa, Wb, IT } = computeXI(t, W, a, b, C);
+    currentI = I;
+
+    // Extra K paths of I(t)
+    let extraIPaths = [];
+    if (multiMode) {
+        for (let k = 0; k < K; k++) {
+            const r2 = makeRng(seed + k + 1);
+            const { W: Wk } = generateBM(N, r2);
+            const { I: Ik } = computeXI(t, Wk, a, b, C);
+            extraIPaths.push(Ik);
+        }
+    }
+    currentExtraIPaths = extraIPaths;
+
+    const { shapes: pinShapes, annotations: pinAnn } = buildPinnedExtras();
+    const traces  = buildTraces(t, W, I, a, b, C, extraIPaths);
+    const layout  = buildLayout(a, b, C, axisRevision, pinShapes, pinAnn);
+
+    Plotly.react('main-chart', [...traces, ...buildPinnedTraces()], layout, plotlyConfig);
+    updatePinUI();
+
+    // Update stats
+    const varIT = C * C * (b - a);
+    document.getElementById('stat-it').textContent   = IT.toFixed(5);
+    document.getElementById('stat-var').textContent  = varIT.toFixed(5);
+    document.getElementById('stat-std').textContent  = Math.sqrt(varIT).toFixed(5);
+    document.getElementById('stat-dw').textContent   = (Wb - Wa).toFixed(5);
+    document.getElementById('stat-len').textContent  = (b - a).toFixed(4);
+    document.getElementById('stat-seed').textContent = seed;
+
+    // Update formula display
+    document.getElementById('formula-display').innerHTML =
+        `X(t) = ${C.toFixed(2)} · <strong>1</strong><sub>(${a.toFixed(2)}, ${b.toFixed(2)}]</sub>(t)<br><br>` +
+        `I(t) = ∫₀ᵗ X(s) dW(s) = C · ( W(t∧b) − W(a) )<br><br>` +
+        `&nbsp;&nbsp;= <span style="color:#2563eb">0</span>` +
+            `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` +
+            `&nbsp;&nbsp;&nbsp;&nbsp;if t ≤ ${a.toFixed(2)}<br>` +
+        `&nbsp;&nbsp;= <span style="color:#e67e22">${C.toFixed(2)} · (W(t) − W(${a.toFixed(2)}))</span>` +
+            `&nbsp;&nbsp;if ${a.toFixed(2)} &lt; t ≤ ${b.toFixed(2)}<br>` +
+        `&nbsp;&nbsp;= <span style="color:#27ae60">${IT.toFixed(4)}</span>` +
+            `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;` +
+            `&nbsp;&nbsp;if t &gt; ${b.toFixed(2)}`;
+}
+
+// ── Distribution chart ────────────────────────────────────────
+function runDistribution() {
+    const { a, b, C } = params;
+    const nSamples = parseInt(document.getElementById('sel-samples').value);
+    const N_dist = 500; // fixed resolution for speed
+    const ITs = new Float64Array(nSamples);
+    for (let k = 0; k < nSamples; k++) {
+        const r = makeRng((seed * 1337 + k * 7919) >>> 0);
+        const { W: Wk } = generateBM(N_dist, r);
+        const aIdx = Math.round(a * N_dist);
+        const bIdx = Math.round(b * N_dist);
+        ITs[k] = C * (Wk[bIdx] - Wk[aIdx]);
+    }
+
+    // Theoretical normal: N(0, C²(b-a))
+    const sigma = Math.abs(C) * Math.sqrt(b - a);
+    const xMin  = -4 * sigma, xMax = 4 * sigma;
+    const nPts  = 200;
+    const xDens = [], yDens = [];
+    for (let i = 0; i <= nPts; i++) {
+        const x = xMin + (xMax - xMin) * i / nPts;
+        xDens.push(x);
+        yDens.push((1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * (x / sigma) ** 2));
+    }
+
+    const traces = [
+        {
+            x: Array.from(ITs),
+            type: 'histogram',
+            histnorm: 'probability density',
+            name: 'Empirical I(1)',
+            marker: { color: 'rgba(231,76,60,0.55)', line: { color: '#c0392b', width: 0.5 } },
+            nbinsx: Math.min(60, Math.round(Math.sqrt(nSamples)))
+        },
+        {
+            x: xDens, y: yDens,
+            type: 'scatter', mode: 'lines',
+            name: `N(0, ${(C*C*(b-a)).toFixed(3)}) theoretical`,
+            line: { color: '#2563eb', width: 2.5, dash: 'solid' }
+        }
+    ];
+    const layout = {
+        height: 260,
+        margin: { t: 15, r: 20, b: 45, l: 55 },
+        xaxis: { title: 'I(1) value' },
+        yaxis: { title: 'Density' },
+        showlegend: true,
+        legend: { font: { size: 11 } },
+        plot_bgcolor: '#fafbff',
+        paper_bgcolor: 'white',
+        bargap: 0.05
+    };
+    document.getElementById('dist-card').style.display = '';
+    Plotly.react('dist-chart', traces, layout, { responsive: true });
+}
+
+// ── Debounce helper ───────────────────────────────────────────
+function debounce(fn, ms) {
+    let timer;
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}
+const debouncedRender = debounce(render, 60);
+
+// ── Slider wiring ─────────────────────────────────────────────
+function bindSlider(id, lblId, paramKey, fmt, onChange) {
+    const el = document.getElementById(id);
+    const lb = document.getElementById(lblId);
+    el.addEventListener('input', () => {
+        params[paramKey] = parseFloat(el.value);
+        lb.textContent = fmt(params[paramKey]);
+        if (onChange) onChange();
+        debouncedRender();
+    });
+}
+
+bindSlider('sl-a', 'lbl-a', 'a', v => v.toFixed(2), () => {
+    if (params.a >= params.b) {
+        params.b = Math.min(+(params.a + 0.05).toFixed(2), 1.0);
+        document.getElementById('sl-b').value   = params.b;
+        document.getElementById('lbl-b').textContent = params.b.toFixed(2);
+    }
+});
+bindSlider('sl-b', 'lbl-b', 'b', v => v.toFixed(2), () => {
+    if (params.b <= params.a) {
+        params.a = Math.max(+(params.b - 0.05).toFixed(2), 0.0);
+        document.getElementById('sl-a').value   = params.a;
+        document.getElementById('lbl-a').textContent = params.a.toFixed(2);
+    }
+});
+bindSlider('sl-c', 'lbl-c', 'C', v => v.toFixed(1));
+bindSlider('sl-n', 'lbl-n', 'N', v => Math.round(v));
+bindSlider('sl-k', 'lbl-k', 'K', v => v.toFixed(0));
+
+// ── Buttons ───────────────────────────────────────────────────
+document.getElementById('btn-resim').addEventListener('click', () => {
+    seed = (Date.now() ^ (Math.random() * 0xFFFFFF)) & 0x7fffffff;
+    axisRevision = Date.now(); // new value forces Plotly to reset axis ranges
+    render();
+});
+
+document.getElementById('btn-multi').addEventListener('click', () => {
+    multiMode = !multiMode;
+    const btn = document.getElementById('btn-multi');
+    btn.textContent  = multiMode ? '× Hide K paths' : 'Show K paths';
+    btn.classList.toggle('btn-warning', multiMode);
+    btn.classList.toggle('btn-outline-light', !multiMode);
+    render();
+});
+
+document.getElementById('btn-run-dist').addEventListener('click', runDistribution);
+
+// ── Initial render ────────────────────────────────────────────
+render();
+
+// ── Pin / unpin on click ──────────────────────────────────────
+document.getElementById('main-chart').on('plotly_click', function(data) {
+    if (!data || !data.points || data.points.length === 0) return;
+    const t_clicked = data.points[0].x;
+    const tol = 1.5 / params.N;
+    const existingIdx = pinnedTs.findIndex(pt => Math.abs(pt - t_clicked) <= tol);
+    if (existingIdx >= 0) {
+        pinnedTs.splice(existingIdx, 1);
+    } else {
+        pinnedTs.push(t_clicked);
+        pinnedTs.sort((p, q) => p - q);
+    }
+    rerenderWithPins();
+});
+
+document.getElementById('btn-clear-pins').addEventListener('click', () => {
+    pinnedTs = [];
+    rerenderWithPins();
+});
+</script>
+</body>
+</html>
