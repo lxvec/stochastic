@@ -1,0 +1,38 @@
+\contentsline {section}{\numberline {1}Before We Begin: A Recap of Classical Integration}{3}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Why do we integrate at all?}{3}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}The Riemann integral: a reminder}{3}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}The Riemann--Stieltjes integral: integrating against a general integrator}{3}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Why classical integration fails for Brownian motion}{4}{subsection.1.4}%
+\contentsline {subsection}{\numberline {1.5}The quadratic variation rule $dW_t \cdot dW_t = dt$}{5}{subsection.1.5}%
+\contentsline {subsection}{\numberline {1.6}What we need: a new integral}{5}{subsection.1.6}%
+\contentsline {section}{\numberline {2}Setting the Stage: Probabilistic Prerequisites}{5}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Filtered probability spaces}{5}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Brownian motion and its natural filtration}{6}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Adapted and predictable processes}{6}{subsection.2.3}%
+\contentsline {subsection}{\numberline {2.4}The space $L^2$ and the norm we will use}{6}{subsection.2.4}%
+\contentsline {section}{\numberline {3}Layer 1: The Itô Integral for Basic Processes}{7}{section.3}%
+\contentsline {subsection}{\numberline {3.1}What is a basic process?}{7}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Defining the integral of a basic process}{7}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Properties of the integral of a basic process}{8}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Layer 2: The Itô Integral for Simple Processes}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}What is a simple process?}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Defining the integral of a simple process}{10}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}The Itô isometry for simple processes}{10}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}The process $M_t = \DOTSI \intop \ilimits@ _0^t H_s\,dW_s$ is a martingale}{11}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Worked examples for simple processes}{11}{subsection.4.5}%
+\contentsline {section}{\numberline {5}Layer 3: The It\^{o} Integral for Predictable Processes}{12}{section.5}%
+\contentsline {subsection}{\numberline {5.1}The strategy: approximate, integrate, take limits}{12}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}The class of admissible integrands}{12}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Density of simple processes in $\mathcal {L}^2$}{13}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}The extension theorem}{13}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}Properties of the general Itô integral}{14}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}A deeper look: why predictability, not just adaptedness?}{14}{subsection.5.6}%
+\contentsline {section}{\numberline {6}The Three Layers: A Side-by-Side Summary}{15}{section.6}%
+\contentsline {section}{\numberline {7}Itô's Formula: The Payoff of the Theory}{15}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Itô's formula for Brownian motion}{15}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}General Itô's formula for an Itô process}{16}{subsection.7.2}%
+\contentsline {section}{\numberline {8}The Martingale Representation Theorem (A Taste)}{17}{section.8}%
+\contentsline {section}{\numberline {9}Putting It All Together: A Road Map}{17}{section.9}%
+\contentsline {section}{\numberline {A}Appendix: The Itô Multiplication Table Derived}{18}{appendix.A}%
+\contentsline {section}{\numberline {B}Appendix: Proof of the Quadratic Variation of Brownian Motion}{18}{appendix.B}%
+\contentsline {section}{\numberline {C}Appendix: Commonly Used Results at a Glance}{19}{appendix.C}%
