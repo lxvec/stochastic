@@ -1,0 +1,20 @@
+body { background: #f8fafc; }
+.param-badge { min-width: 56px; text-align: right; font-family: monospace; font-size: 0.85rem; }
+.slider-row { display: flex; align-items: center; gap: 10px; }
+.slider-row label { min-width: 140px; margin: 0; font-size: 0.9rem; }
+.slider-row input[type=range] { flex: 1; }
+.formula-box {
+  background: #f8f9fc; border-left: 4px solid #6366f1;
+  padding: 12px 16px; border-radius: 4px; font-family: ui-monospace, monospace;
+  font-size: 0.86rem; line-height: 2;
+}
+.stat-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #dee2e6; font-size: 0.87rem; }
+.stat-row:last-child { border-bottom: none; }
+#path-chart { min-height: 460px; }
+.cdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+.cdot-bm { background: #27ae60; }
+.cdot-drift { background: #0891b2; }
+.cdot-diff { background: #d97706; }
+.cdot-cir { background: #4f46e5; }
+.cdot-bm-q { background: #ec4899; }
+.cdot-gamma { background: #e11d48; }

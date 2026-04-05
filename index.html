@@ -72,9 +72,11 @@
                     <li class="nav-item"><a class="nav-link" href="pages/binomial-model.html">Binomial Model</a></li>
                     <li class="nav-item"><a class="nav-link" href="pages/ito-basic-process.html">Itô Integral</a></li>
                     <li class="nav-item"><a class="nav-link" href="pages/cir-model.html">CIR Model</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pages/cir-p-vs-q.html">CIR: P vs Q</a></li>
                     <li class="nav-item"><a class="nav-link" href="pages/variation.html">Variation</a></li>
                     <li class="nav-item"><a class="nav-link" href="pages/ou-sde.html">OU / Ex. 8.1</a></li>
                     <li class="nav-item"><a class="nav-link" href="pages/discrete_sde.html">Discrete SDE</a></li>
+                    <li class="nav-item"><a class="nav-link" href="pages/sde-builder.html">SDE Builder</a></li>
                 </ul>
             </div>
         </div>
@@ -210,6 +212,20 @@
             <div class="col-md-6 col-lg-4">
                 <div class="card feature-card h-100" style="border-left-color: #7c3aed;">
                     <div class="card-body">
+                        <h5 class="card-title" style="color:#7c3aed;">SDE Builder</h5>
+                        <p class="card-text text-muted">
+                            Type any drift μ(t,X) and diffusion σ(t,X) expression and simulate the SDE
+                            via Euler–Maruyama. Displays both the SDE path X<sub>t</sub> and the
+                            driving Brownian motion W<sub>t</sub> on the same random path.
+                        </p>
+                        <a href="pages/sde-builder.html" class="btn btn-sm btn-outline-primary">Explore</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" style="border-left-color: #7c3aed;">
+                    <div class="card-body">
                         <h5 class="card-title" style="color:#7c3aed;">CIR Short-Rate Model</h5>
                         <p class="card-text text-muted">
                             Simulate the Cox–Ingersoll–Ross square-root diffusion. Explore mean-reversion,
@@ -217,6 +233,20 @@
                             with interactive sliders.
                         </p>
                         <a href="pages/cir-model.html" class="btn btn-sm btn-outline-primary">Explore</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card feature-card h-100" style="border-left-color: #4f46e5;">
+                    <div class="card-body">
+                        <h5 class="card-title" style="color:#4f46e5;">CIR Under P vs Q</h5>
+                        <p class="card-text text-muted">
+                            Compare the same CIR short-rate model under the physical and risk-neutral
+                            measures. See how the market price of risk changes the drift, derive
+                            kappa<sup>Q</sup> and theta<sup>Q</sup>, and visualize the Brownian shift from Girsanov.
+                        </p>
+                        <a href="pages/cir-p-vs-q.html" class="btn btn-sm btn-outline-primary">Explore</a>
                     </div>
                 </div>
             </div>

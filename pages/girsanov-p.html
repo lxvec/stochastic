@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brownian Motion Under ℙ — CIR Decomposition</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="../css/styles.css">
+    <style>
+        .param-badge  { min-width: 56px; text-align: right; font-family: monospace; font-size: 0.85rem; }
+        .slider-row   { display: flex; align-items: center; gap: 10px; }
+        .slider-row label { min-width: 140px; margin: 0; font-size: 0.9rem; }
+        .slider-row input[type=range] { flex: 1; }
+        .formula-box  { background: #f8f9fc; border-left: 4px solid #6366f1;
+                        padding: 12px 16px; border-radius: 4px; font-family: 'Courier New', monospace;
+                        font-size: 0.86rem; line-height: 2.2; }
+        .stat-row     { display: flex; justify-content: space-between; padding: 4px 0;
+                        border-bottom: 1px dashed #dee2e6; font-size: 0.87rem; }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label   { color: #555; }
+        .stat-val     { font-family: monospace; font-weight: 600; }
+        .nav-link.active-page { color: #06b6d4 !important; font-weight: 600; }
+        #path-chart   { min-height: 460px; }
+        .tutorial-list .list-group-item {
+            cursor: pointer; font-size: 0.82rem; padding: 0.5rem 0.65rem;
+            border-left: 3px solid transparent;
+        }
+        .tutorial-list .list-group-item:hover { background: #f8fafc; }
+        .tutorial-list .list-group-item.active-step {
+            border-left-color: #4f46e5; background: #eef2ff; font-weight: 600;
+        }
+        .tutorial-hint { font-size: 0.76rem; color: #64748b; line-height: 1.35; }
+        .feller-ok    { background: #dcfce7; color: #166534; border-radius: 4px;
+                        padding: 2px 8px; font-size: 0.79rem; }
+        .feller-fail  { background: #fee2e2; color: #991b1b; border-radius: 4px;
+                        padding: 2px 8px; font-size: 0.79rem; }
+        /* Coloured legend dots used in labels */
+        .cdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+                margin-right: 4px; vertical-align: middle; }
+        .cdot-bm    { background: #27ae60; }
+        .cdot-drift { background: #0891b2; }
+        .cdot-diff  { background: #d97706; }
+        .cdot-cir   { background: #4f46e5; }
+        .cdot-bm-q  { background: #ec4899; }
+        .cdot-gamma { background: #e11d48; }
+        /* Toggle label alignment */
+        .chk-lbl { display: flex; align-items: center; gap: 4px; }
+
+        /* Make toggles visible against the blue card header */
+        .card-header .form-check-input {
+            background-color: rgba(255,255,255,0.18);
+            border-color: rgba(255,255,255,0.45);
+            cursor: pointer;
+        }
+        .card-header .form-check-input:checked {
+            background-color: #facc15;   /* bright yellow — clearly "on" */
+            border-color: #facc15;
+            /* Bootstrap uses a background-image for the knob; re-apply with dark knob */
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23111'/%3e%3c/svg%3e");
+        }
+        .card-header .form-check-input:focus {
+            box-shadow: 0 0 0 0.2rem rgba(250,204,21,0.4);
+        }
+        /* ℚ row — pink “on” state */
+        .card-header.q-measure .form-check-input:checked {
+            background-color: #ec4899;
+            border-color: #ec4899;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+        }
+        .card-header.q-measure .form-check-input:focus {
+            box-shadow: 0 0 0 0.2rem rgba(236,72,153,0.45);
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Navbar ─────────────────────────────────────────────────── -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="../index.html">Stochastic Visualizer</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="ito-basic-process.html">Itô Integral</a></li>
+                <li class="nav-item"><a class="nav-link" href="variation.html">Variation</a></li>
+                <li class="nav-item"><a class="nav-link" href="ou-sde.html">OU / Ex. 8.1</a></li>
+                <li class="nav-item"><a class="nav-link" href="discrete_sde.html">Discrete SDE</a></li>
+                <li class="nav-item"><a class="nav-link" href="cir-model.html">CIR Model</a></li>
+                <li class="nav-item"><a class="nav-link" href="cir-p-vs-q.html">CIR: P vs Q</a></li>
+                <li class="nav-item"><a class="nav-link active-page" href="girsanov-p.html">Girsanov: ℙ</a></li>
+                <li class="nav-item"><a class="nav-link" href="sde-builder.html">SDE Builder</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- ── Page header ────────────────────────────────────────────── -->
+<div style="background: linear-gradient(135deg, #0f172a 0%, #4f46e5 100%); color: white; padding: 18px 0;">
+    <div class="container">
+        <h4 class="mb-1 fw-bold">Brownian Motion Under ℙ — CIR Component Decomposition</h4>
+        <p class="mb-0 opacity-75" style="font-size: 0.92rem;">
+            dX<sub>t</sub> = κ(θ − X<sub>t</sub>)&thinsp;dt + σ&thinsp;√X<sub>t</sub>&thinsp;dW<sub>t</sub>
+            &nbsp;·&nbsp; Toggle each component independently to build intuition
+        </p>
+    </div>
+</div>
+
+<!-- ── Main layout ────────────────────────────────────────────── -->
+<div class="container-fluid py-3">
+<div class="row g-3">
+
+<!-- ── LEFT: equation + chart + table ─────────────────────────── -->
+<div class="col-lg-8">
+
+    <!-- CIR market price of risk (course / Girsanov note notation) -->
+    <div class="card mb-3 border-secondary border-opacity-25">
+        <div class="card-header py-2" style="background: #fef2f2; border-bottom: 1px solid #fecaca;">
+            <span style="font-size: 0.88rem; font-weight: 600;">Market price of risk — predictable process (CIR)</span>
+        </div>
+        <div class="card-body p-3">
+            <div class="formula-box mb-0" style="border-left-color:#e11d48;line-height:2;">
+                <span style="color:#374151;">For the short rate</span> <em>r</em><sub>t</sub> <span style="color:#374151;">(here the simulated CIR state</span> <em>X</em><sub>t</sub><span style="color:#374151;">), the</span>
+                <strong style="color:#9f1239;"> predictable market price of risk</strong> <span style="color:#374151;">is</span><br>
+                <span style="font-size:0.95rem;">
+                    γ<sub>t</sub> =
+                    <span style="display:inline-block;vertical-align:middle;text-align:center;margin:0 0.15em;">
+                        <span style="border-bottom:1px solid #334155;padding:0 0.1em;">(κ<sup>ℚ</sup> − κ<sup>ℙ</sup>)√<em>r</em><sub>t</sub></span><br>
+                        <span>σ</span>
+                    </span>
+                    +
+                    <span style="display:inline-block;vertical-align:middle;text-align:center;margin:0 0.15em;">
+                        <span style="border-bottom:1px solid #334155;padding:0 0.1em;">κ<sup>ℙ</sup>θ<sup>ℙ</sup> − κ<sup>ℚ</sup>θ<sup>ℚ</sup></span><br>
+                        <span>σ√<em>r</em><sub>t</sub></span>
+                    </span>
+                </span><br>
+                <span style="color:#64748b;font-size:0.82rem;">
+                    <strong>Girsanov (same notation as course notes):</strong>
+                    d<em>W</em><sub>t</sub><sup>ℚ</sup> = d<em>W</em><sub>t</sub><sup>ℙ</sup> + γ<sub>t</sub>&thinsp;dt
+                    &nbsp;⇒&nbsp;
+                    <em>W̃</em><sub>t</sub> := <em>W</em><sub>t</sub><sup>ℙ</sup> + ∫<sub>0</sub><sup>t</sup> γ<sub>s</sub>&thinsp;ds is a ℚ–Brownian motion (same <em>ω</em>; integral on the EM grid along simulated <em>X</em>).
+                    <br>
+                    <strong>Chart:</strong> the pink <em>W</em><sup>ℚ</sup> trace is a <strong>separate</strong> standard Brownian path (own seed), same <strong>law</strong> as ℚ–Wiener but <strong>not</strong> tied to σ or the CIR path — so it stays fixed when you move σ (unlike γ or <em>W̃</em>).
+                </span>
+            </div>
+            <p class="mb-0 mt-2 pt-2 px-1" style="font-size:0.87rem; color:#334155; line-height:1.55; border-top:1px dashed #fecaca;">
+                <strong>Assumption (imposed on this page):</strong> κ<sup>ℙ</sup>θ<sup>ℙ</sup> = κ<sup>ℚ</sup>θ<sup>ℚ</sup>.
+                Then κ<sup>ℙ</sup>θ<sup>ℙ</sup> − κ<sup>ℚ</sup>θ<sup>ℚ</sup> = 0, so the <strong>second summand</strong> in γ<sub>t</sub> above vanishes and
+                γ<sub>t</sub> = (κ<sup>ℚ</sup> − κ<sup>ℙ</sup>)√<em>r</em><sub>t</sub>/σ.
+                The chart’s γ trace uses this reduced expression (the second summand above is treated as zero under the assumption).
+            </p>
+        </div>
+    </div>
+
+    <!-- Equation card -->
+    <div class="card mb-3">
+        <div class="card-header bg-light py-2">
+            <span style="font-size: 0.88rem; font-weight: 600;">CIR SDE under ℙ — live component view</span>
+        </div>
+        <div class="card-body p-3">
+            <div class="formula-box" id="formula-display">
+                <!-- filled by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Path chart -->
+    <div class="card mb-3">
+        <div class="card-header bg-primary text-white py-2">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <span style="font-size: 0.88rem; font-weight: 600;">Paths under ℙ</span>
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="chk-bm" checked>
+                        <label class="form-check-label text-white chk-lbl" for="chk-bm" style="font-size: 0.80rem;">
+                            <span class="cdot cdot-bm"></span><em>W</em><sub>t</sub><sup>ℙ</sup> &thinsp;(BM)
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="chk-diff">
+                        <label class="form-check-label text-white chk-lbl" for="chk-diff" style="font-size: 0.80rem;">
+                            <span class="cdot cdot-diff"></span>Diffusion σ√X<sub>t</sub>&thinsp;dW
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="chk-sigwt">
+                        <label class="form-check-label text-white chk-lbl" for="chk-sigwt" style="font-size: 0.80rem;">
+                            <span class="cdot" style="background:#c026d3;"></span>σ·<em>W</em><sub>t</sub><sup>ℙ</sup>
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="chk-drift">
+                        <label class="form-check-label text-white chk-lbl" for="chk-drift" style="font-size: 0.80rem;">
+                            <span class="cdot cdot-drift"></span>Drift κ(θ−X<sub>t</sub>)dt
+                        </label>
+                    </div>
+
+                    <div class="form-check form-switch mb-0 border-start border-light border-opacity-50 ps-3">
+                        <input class="form-check-input" type="checkbox" id="chk-wp-to-q">
+                        <label class="form-check-label text-white chk-lbl fw-semibold" for="chk-wp-to-q" style="font-size: 0.80rem;"
+                            title="Girsanov: ℚ keeps the same Brownian coordinate W^{ℙ}(ω); only probabilities on paths change (e.g. via Z_T). Pink traces are still a separate Wiener draw here — this switch relabels them to that interpretation.">
+                            <em>W</em><sup>ℙ</sup>→ℚ reweight
+                        </label>
+                    </div>
+
+                    <button id="btn-kpaths" class="btn btn-sm btn-outline-light fw-bold">Show K paths</button>
+                    <button id="btn-resim"  class="btn btn-sm btn-light text-primary fw-bold">⟳ New W path</button>
+                </div>
+            </div>
+        </div>
+        <div class="card-header q-measure text-white py-2 border-top border-light border-opacity-25"
+                 style="background: linear-gradient(90deg, #831843 0%, #be185d 55%, #9d174d 100%);">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <span id="hdr-q-measure" style="font-size: 0.82rem; font-weight: 600;">ℚ–Brownian: independent Wiener path (fixed when σ / CIR params change)</span>
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="chk-gamma">
+                            <label class="form-check-label text-white chk-lbl" for="chk-gamma" style="font-size: 0.80rem;">
+                                <span class="cdot cdot-gamma"></span>γ<sub>t</sub> &thinsp;(MPR)
+                            </label>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="chk-bm-q">
+                            <label class="form-check-label text-white chk-lbl" for="chk-bm-q" style="font-size: 0.80rem;">
+                                <span class="cdot cdot-bm-q"></span><em>W</em><sub>t</sub><sup>ℚ</sup> &thinsp;(BM)
+                            </label>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="chk-sigwt-q">
+                            <label class="form-check-label text-white chk-lbl" for="chk-sigwt-q" style="font-size: 0.80rem;">
+                                <span class="cdot" style="background:#fbcfe8;"></span>σ·<em>W</em><sub>t</sub><sup>ℚ</sup>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+        </div>
+        <div class="card-body p-1">
+            <div id="path-chart"></div>
+        </div>
+    </div>
+
+</div><!-- /col-lg-8 -->
+
+<!-- ── RIGHT: controls ─────────────────────────────────────────── -->
+<div class="col-lg-4">
+
+    <!-- Guided walkthrough -->
+    <div class="card mb-3 border-primary border-opacity-25">
+        <div class="card-header py-2" style="background: linear-gradient(90deg,#1e1b4b,#4338ca); color:#fff;">
+            <strong style="font-size:0.88rem;">Girsanov walkthrough</strong>
+        </div>
+        <div class="list-group list-group-flush tutorial-list" id="tutorial-steps">
+            <button type="button" class="list-group-item list-group-item-action" data-tutorial="0">
+                Manual mode — use toggles yourself
+            </button>
+            <button type="button" class="list-group-item list-group-item-action" data-tutorial="1">
+                1. One Brownian path <em>W</em><sup>ℙ</sup> under ℙ
+            </button>
+        </div>
+        <div class="card-body py-2 px-3 tutorial-hint" id="tutorial-blurb">
+            The green <em>W</em><sup>ℙ</sup> drives the CIR simulation. The pink <em>W</em><sup>ℚ</sup> is a <strong>separate</strong> standard Brownian path (Lévy–Ciesielski), fixed when you change σ or other CIR sliders — same Wiener <em>law</em> under ℚ, not the same-<em>ω</em> Girsanov shift <em>W</em><sup>ℙ</sup>+∫γ. Toggle γ to see the MPR process along <em>X</em>; see the red box for the density formula.
+        </div>
+    </div>
+
+    <!-- Parameters -->
+    <div class="card mb-3">
+        <div class="card-header bg-dark text-white py-2">
+            <strong>Parameters (under ℙ)</strong>
+        </div>
+        <div class="card-body py-2 px-3">
+
+            <div class="mb-2">
+                <div class="slider-row mb-1">
+                    <label>κ <small class="text-muted">(mean rev.)</small></label>
+                    <span class="badge bg-primary param-badge" id="lbl-kappa">1.00</span>
+                </div>
+                <input type="range" class="form-range" id="sl-kappa"
+                       min="0.01" max="5" step="0.05" value="1">
+            </div>
+
+            <div class="mb-2">
+                <div class="slider-row mb-1">
+                    <label>θ <small class="text-muted">(long-run mean)</small></label>
+                    <span class="badge bg-primary param-badge" id="lbl-theta">0.080</span>
+                </div>
+                <input type="range" class="form-range" id="sl-theta"
+                       min="0.005" max="0.5" step="0.005" value="0.08">
+            </div>
+
+            <div class="mb-2">
+                <div class="slider-row mb-1">
+                    <label>σ <small class="text-muted">(volatility)</small></label>
+                    <span class="badge bg-primary param-badge" id="lbl-sigma">0.10</span>
+                </div>
+                <input type="range" class="form-range" id="sl-sigma"
+                       min="0.01" max="1.0" step="0.01" value="0.10">
+            </div>
+
+            <div class="mb-2 p-2 rounded" style="background: #fdf2f8; border: 1px solid #fbcfe8;">
+                <div class="text-dark fw-semibold mb-2" style="font-size:0.82rem;">CIR parameters under ℚ</div>
+                <div class="slider-row mb-1">
+                    <label class="text-dark">κ<sup>ℚ</sup></label>
+                    <span class="badge param-badge" style="background:#be185d;color:#fff;" id="lbl-kappaQ">1.05</span>
+                </div>
+                <input type="range" class="form-range" id="sl-kappaQ"
+                       min="0.01" max="5" step="0.05" value="1.05">
+                <div class="slider-row mb-1 mt-2">
+                    <label class="text-dark">θ<sup>ℚ</sup></label>
+                    <span class="badge param-badge" style="background:#be185d;color:#fff;" id="lbl-thetaQ">0.076</span>
+                </div>
+                <input type="range" class="form-range" id="sl-thetaQ"
+                       min="0.005" max="0.5" step="0.001" value="0.076">
+                <div class="text-muted mt-1" style="font-size: 0.72rem; line-height: 1.35;">
+                    γ<sub>t</sub> uses κ<sup>ℙ</sup>,θ<sup>ℙ</sup> from above and these κ<sup>ℚ</sup>,θ<sup>ℚ</sup>; <em>W</em><sup>ℚ</sup> is built from the same <em>W</em><sup>ℙ</sup> + ∫γ&thinsp;ds.
+                </div>
+            </div>
+
+            <div class="mb-2">
+                <div class="slider-row mb-1">
+                    <label>X₀ <small class="text-muted">(initial value)</small></label>
+                    <span class="badge bg-primary param-badge" id="lbl-x0">0.050</span>
+                </div>
+                <input type="range" class="form-range" id="sl-x0"
+                       min="0.001" max="0.5" step="0.001" value="0.05">
+            </div>
+
+            <hr class="my-2">
+
+            <div class="mb-2">
+                <div class="slider-row mb-1">
+                    <label>Resolution <em>k</em></label>
+                    <span class="badge bg-primary param-badge" id="lbl-level">9</span>
+                </div>
+                <input type="range" class="form-range" id="sl-level"
+                       min="0" max="15" step="1" value="9">
+            </div>
+
+            <div class="mb-2">
+                <div class="slider-row mb-1">
+                    <label>T <small class="text-muted">(horizon)</small></label>
+                    <span class="badge bg-primary param-badge" id="lbl-T">5.0</span>
+                </div>
+                <input type="range" class="form-range" id="sl-T"
+                       min="0.5" max="20" step="0.5" value="5">
+            </div>
+
+            <div class="mb-2">
+                <div class="slider-row mb-1">
+                    <label>K <small class="text-muted">(paths)</small></label>
+                    <span class="badge bg-secondary param-badge" id="lbl-K">10</span>
+                </div>
+                <input type="range" class="form-range" id="sl-K"
+                       title="Fan paths use discrete BM on the EM grid (fast); primary green/pink use Lévy bridges."
+                       min="1" max="500" step="1" value="10">
+            </div>
+
+            <div class="p-2 rounded" style="background: #f1f5f9; font-size: 0.80rem;" id="lbl-step-info">
+                N = 2⁹ = 512 steps &nbsp;·&nbsp; Δt = 0.0098
+            </div>
+
+            <hr class="my-2">
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="chk-theta"
+                       style="background-color: #facc15; border-color: #facc15;">
+                <label class="form-check-label chk-lbl" for="chk-theta" style="font-size: 0.85rem;">
+                    <span style="display:inline-block;width:14px;height:8px;background:rgba(250,204,21,0.45);border-radius:2px;margin-right:5px;vertical-align:middle;"></span>
+                    Show θ band
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="card mb-3">
+        <div class="card-header py-2" style="background: #1e3a5f; color: white;">
+            <strong>Statistics</strong>
+        </div>
+        <div class="card-body py-2 px-3">
+            <div class="stat-row">
+                <span class="stat-label">Feller: 2κθ &gt; σ²</span>
+                <span class="stat-val" id="st-feller">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">2κθ</span>
+                <span class="stat-val" id="st-2kt">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">σ²</span>
+                <span class="stat-val" id="st-sig2">—</span>
+            </div>
+            <hr class="my-1">
+            <div class="stat-row">
+                <span class="stat-label">E[X<sub>T</sub>] theoretical</span>
+                <span class="stat-val" id="st-EXT">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">X<sub>T</sub> simulated (CIR)</span>
+                <span class="stat-val" id="st-simXT">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">W<sub>T</sub> realized</span>
+                <span class="stat-val" id="st-WT">—</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Steps N</span>
+                <span class="stat-val" id="st-N">—</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick reference -->
+    <div class="card">
+        <div class="card-header py-2 bg-light">
+            <strong style="font-size: 0.88rem;">Quick Reference</strong>
+        </div>
+        <div class="card-body py-2 px-3" style="font-size: 0.82rem; line-height: 1.85; color: #333;">
+            <p class="mb-2">
+                <strong>CIR SDE under ℙ</strong><br>
+                dX<sub>t</sub> = κ(θ−X<sub>t</sub>)dt + σ√X<sub>t</sub>&thinsp;dW<sub>t</sub>
+            </p>
+            <p class="mb-2">
+                <span class="cdot cdot-bm"></span>
+                <strong style="color: #166534;">W<sub>t</sub></strong>
+                — pure Brownian motion under ℙ; starts at 0, drives the whole process via dW<sub>t</sub>
+            </p>
+            <p class="mb-2">
+                <span class="cdot cdot-drift"></span>
+                <strong style="color: #0891b2;">Drift only</strong>
+                — simulate X using only κ(θ−X<sub>t</sub>)dt; deterministic ODE, exponential convergence toward θ
+            </p>
+            <p class="mb-2">
+                <span class="cdot cdot-diff"></span>
+                <strong style="color: #d97706;">Diffusion only</strong>
+                — simulate X using only σ√X<sub>t</sub>&thinsp;dW<sub>t</sub>; random noise scaled by √X, no pull toward θ
+            </p>
+            <p class="mb-2">
+                <span class="cdot" style="background:#c026d3;"></span>
+                <strong style="color: #c026d3;">σ·W<sub>t</sub></strong>
+                — appears with diffusion toggle; the displayed BM multiplied by σ, showing the raw scaled noise before the √X<sub>t</sub> state-dependent weighting
+            </p>
+            <p class="mb-2">
+                <span class="cdot cdot-cir"></span>
+                <strong style="color: #4f46e5;">Full CIR</strong>
+                — appears when all three toggles are on; the combination of drift + diffusion
+            </p>
+            <p class="mb-2">
+                <span class="cdot cdot-gamma"></span>
+                <strong style="color: #e11d48;">γ<sub>t</sub></strong>
+                — CIR predictable market price of risk (see top panel); plotted on the <strong>right</strong> axis along the simulated full CIR path <em>X</em><sub>t</sub> = <em>r</em><sub>t</sub>.
+            </p>
+            <p class="mb-0">
+                <span class="cdot cdot-bm-q"></span>
+                <strong style="color: #ec4899;"><em>W</em><sub>t</sub><sup>ℚ</sup></strong>
+                — same <em>ω</em> as <em>W</em><sup>ℙ</sup>, with <em>W</em><sub>t</sub><sup>ℚ</sup> = <em>W</em><sub>t</sub><sup>ℙ</sup> + ∫<sub>0</sub><sup>t</sup>γ<sub>s</sub>ds from the γ formula and κ<sup>ℚ</sup>, θ<sup>ℚ</sup> sliders.
+            </p>
+        </div>
+    </div>
+
+</div><!-- /col-lg-4 -->
+</div><!-- /row -->
+</div><!-- /container-fluid -->
+
+<!-- ── Footer ─────────────────────────────────────────────────── -->
+<footer class="bg-dark text-white py-3 mt-4">
+    <div class="container text-center">
+        <small class="text-muted">
+            Stochastic Calculus Visualizer · MATH 60646A HEC Montréal ·
+            CIR under ℙ &mdash; building toward Girsanov measure change
+        </small>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+'use strict';
+
+/* ── State ──────────────────────────────────────────────────────── */
+let p = { kappa: 1, theta: 0.08, sigma: 0.10, kappaQ: 1.05, thetaQ: 0.076, X0: 0.05, level: 9, T: 5, K: 10 };
+const MAX_LEVEL    = 15;
+const MAX_BRIDGE_N = 1 << MAX_LEVEL;   // 32768
+const T_MAX        = 20;               // bridge always built for this horizon
+
+let wBridge      = null;
+let wBridgeQ     = null;   /* independent ℚ–Wiener construction (not σ–coupled to CIR) */
+let currentSeed  = Date.now() & 0xFFFFFF;
+const SEED_Q_XOR = 0xBADC0FEE;        /* primary ℚ bridge: XOR with ℙ seed */
+const SEED_Q_EXTRA_XOR = 0xC0FFEE69;  /* extra ℚ paths vs ℙ extras */
+let lockedYRange = null;
+let kMode        = false;
+let tutorialStep = 0;   /* 0 = manual; 1 = guided (W^ℙ only) */
+
+const PC = { responsive: true, displayModeBar: false };
+
+/* Fixed chart dimensions so toggling never shifts the frame */
+const CHART_H       = 460;
+const CHART_MARGINS = { t: 12, r: 20, b: 110, l: 65 };
+
+/* ── PRNG (mulberry32) ──────────────────────────────────────────── */
+function makeRng(seed) {
+    let s = seed >>> 0;
+    return function () {
+        s += 0x6D2B79F5;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+function randnFromRng(rng) {
+    const u = rng(), v = rng();
+    return Math.sqrt(-2 * Math.log(u + 1e-15)) * Math.cos(2 * Math.PI * v);
+}
+
+/* ── Brownian bridge (Lévy–Ciesielski) ─────────────────────────── */
+function buildBridge(T, seed) {
+    const rng = makeRng(seed);
+    const W   = new Float64Array(MAX_BRIDGE_N + 1);
+    W[MAX_BRIDGE_N] = randnFromRng(rng) * Math.sqrt(T);
+    for (let l = 0; l < MAX_LEVEL; l++) {
+        const span = MAX_BRIDGE_N >> l, half = span >> 1;
+        const std  = Math.sqrt(T / (4 << l));
+        for (let k = 0, n = 1 << l; k < n; k++) {
+            const left = k * span, mid = left + half, right = left + span;
+            W[mid] = (W[left] + W[right]) * 0.5 + randnFromRng(rng) * std;
+        }
+    }
+    return W;
+}
+
+/* Extract increments / path values from any bridge array.
+   Bridges are always built for T_MAX; we extract only the [0, p.T] fraction. */
+function bridgeDW(bridge, level) {
+    // Each EM step covers p.T/N time, which occupies p.T/T_MAX * MAX_BRIDGE_N/N bridge indices.
+    const N       = 1 << level;
+    const strideF = (p.T / T_MAX) * (MAX_BRIDGE_N / N);
+    const dW      = new Float64Array(N);
+    for (let i = 0; i < N; i++) {
+        const i0 = Math.min(Math.round(i       * strideF), MAX_BRIDGE_N);
+        const i1 = Math.min(Math.round((i + 1) * strideF), MAX_BRIDGE_N);
+        dW[i] = bridge[i1] - bridge[i0];
+    }
+    return dW;
+}
+function bridgeW(bridge, level) {
+    // Sample the bridge at the same N+1 coarse grid points used by the EM processes,
+    // so W_t and σ·W_t always share the same resolution as drift/diffusion/CIR.
+    const N       = 1 << level;
+    const strideF = (p.T / T_MAX) * (MAX_BRIDGE_N / N);
+    const W       = new Float64Array(N + 1);
+    for (let i = 0; i <= N; i++) {
+        const idx = Math.min(Math.round(i * strideF), MAX_BRIDGE_N);
+        W[i] = bridge[idx];
+    }
+    return W;
+}
+
+/* Discrete-time BM on the EM grid: W₀=0, ΔWᵢ ~ N(0,Δt). O(N) — used for K-fan paths
+   so we never call buildBridge per extra (that was freezing the UI for large K). */
+function discreteBMOnGrid(seed, N, T) {
+    const dt  = T / N;
+    const rng = makeRng(seed >>> 0);
+    const W   = new Float64Array(N + 1);
+    const sdt = Math.sqrt(dt);
+    for (let i = 0; i < N; i++) {
+        W[i + 1] = W[i] + sdt * randnFromRng(rng);
+    }
+    return W;
+}
+
+/* ── CIR Euler–Maruyama ─────────────────────────────────────────── */
+function simulateCIR(kappa, theta, sigma, X0, dt, dW, N, useDrift, useDiff) {
+    const X = new Float64Array(N + 1);
+    X[0] = X0;
+    for (let i = 0; i < N; i++) {
+        const xPos = Math.max(X[i], 0);
+        const d    = useDrift ? kappa * (theta - X[i]) * dt : 0;
+        const s    = useDiff  ? sigma * Math.sqrt(xPos) * dW[i] : 0;
+        X[i + 1]   = X[i] + d + s;
+    }
+    return X;
+}
+
+/* ── Theoretical CIR mean ───────────────────────────────────────── */
+function cirMean(t, kappa, theta, X0) {
+    if (Math.abs(kappa) < 1e-10) return X0;
+    return theta + (X0 - theta) * Math.exp(-kappa * t);
+}
+
+/* CIR predictable MPR γ_t(r) with r > 0 floor for stability at 0. */
+/* γ along r; second canonical term is dropped under imposed κ^P θ^P = κ^Q θ^Q (see MPR card). */
+function cirGammaAtR(r, kP, thP, kQ, thQ, sigma) {
+    const rp = Math.max(r, 1e-10);
+    const sr = Math.sqrt(rp);
+    return ((kQ - kP) * sr / sigma);
+}
+
+function gammaAlongX(X, kP, thP, kQ, thQ, sigma) {
+    const n = X.length;
+    const g = new Float64Array(n);
+    for (let i = 0; i < n; i++) {
+        g[i] = cirGammaAtR(X[i], kP, thP, kQ, thQ, sigma);
+    }
+    return g;
+}
+
+function updateTutorialHighlight() {
+    document.querySelectorAll('#tutorial-steps [data-tutorial]').forEach(el => {
+        el.classList.toggle('active-step', String(tutorialStep) === el.getAttribute('data-tutorial'));
+    });
+}
+
+const TUTORIAL_BLURBS = {
+    0: 'Use toggles freely. Pink <em>W</em><sup>ℚ</sup> is an independent Wiener path (own seed); it does <strong>not</strong> move when you change σ. Girsanov’s <em>W</em><sup>ℙ</sup>+∫γ construction is in the red box, not drawn as the pink line.',
+    reweight0: '<strong>W</strong><sup>ℙ</sup>→ℚ reweight is on: read pink as the <strong>same</strong> <em>W</em><sup>ℙ</sup> coordinate viewed under ℚ (paths reweighted by dℚ/dℙ), not a second physical noise. The curve is still a separate Wiener <em>draw</em> here so σ does not shift it; green <em>W</em><sup>ℙ</sup> drives CIR.',
+    1: '<strong>Step 1.</strong> One realized <em>W</em><sup>ℙ</sup>: under ℙ it is (discrete) Brownian motion with Δ<em>W</em><sup>ℙ</sup> ~ N(0,Δt).'
+};
+
+function updateQMeasureHeader() {
+    const el = document.getElementById('hdr-q-measure');
+    const chk = document.getElementById('chk-wp-to-q');
+    if (!el || !chk) return;
+    el.innerHTML = chk.checked
+        ? 'ℚ view: same <em>W</em><sup>ℙ</sup>(<em>ω</em>) — under ℚ, probabilities on paths are reweighted (dℚ/dℙ)'
+        : 'ℚ–Brownian: independent Wiener path (fixed when σ / CIR params change)';
+}
+
+function refreshTutorialBlurbIfManual() {
+    if (tutorialStep !== 0) return;
+    const el = document.getElementById('tutorial-blurb');
+    const rq = document.getElementById('chk-wp-to-q').checked;
+    el.innerHTML = rq ? TUTORIAL_BLURBS.reweight0 : TUTORIAL_BLURBS[0];
+}
+
+function setTutorialStep(n) {
+    tutorialStep = n;
+    const chk = id => document.getElementById(id);
+    if (n === 0) {
+        refreshTutorialBlurbIfManual();
+        updateTutorialHighlight();
+        lockedYRange = null;
+        render();
+        return;
+    }
+    document.getElementById('tutorial-blurb').innerHTML = TUTORIAL_BLURBS[n] || '';
+    /* Reset toggles for clarity */
+    ['chk-diff', 'chk-drift', 'chk-sigwt', 'chk-sigwt-q'].forEach(id => { chk(id).checked = false; });
+    if (n === 1) {
+        kMode = false;
+        chk('chk-bm').checked    = true;
+        chk('chk-bm-q').checked = false;
+        chk('chk-gamma').checked = false;
+        chk('chk-theta').checked = false;
+    }
+    updateTutorialHighlight();
+    lockedYRange = null;
+    render();
+}
+
+/* ── Formula display ────────────────────────────────────────────── */
+function updateFormula() {
+    const { kappa, theta, sigma, kappaQ, thetaQ } = p;
+    const showBM    = document.getElementById('chk-bm').checked;
+    const showDiff  = document.getElementById('chk-diff').checked;
+    const showDrift = document.getElementById('chk-drift').checked;
+    const showSigWt = document.getElementById('chk-sigwt').checked;
+    const driftSty  = showDrift ? 'color:#0891b2;font-weight:600;' : 'opacity:0.25;';
+    const diffSty   = showDiff  ? 'color:#d97706;font-weight:600;' : 'opacity:0.25;';
+    const bmNote    = showBM
+        ? `<span style="color:#27ae60;font-weight:600;"><em>W</em><sub>t</sub><sup>ℙ</sup></span> = BM under ℙ &nbsp;|&nbsp; `
+        : '';
+    const wtFormula = showBM
+        ? `<span style="color:#27ae60;font-weight:600;"><em>W</em><sub>t</sub><sup>ℙ</sup></span>`
+        : `<span style="opacity:0.25;"><em>W</em><sub>t</sub><sup>ℙ</sup></span>`;
+    const g0 = cirGammaAtR(p.X0, kappa, theta, kappaQ, thetaQ, sigma);
+    const reweightView = document.getElementById('chk-wp-to-q').checked;
+    const pinkFoot = reweightView
+        ? `same <em>W</em><sup>ℙ</sup> under ℚ = reweight ℙ by <em>Z</em><sub><em>T</em></sub>; pink still a separate Wiener <em>draw</em> here (σ-invariant) &nbsp;·&nbsp; `
+        : `pink trace = separate Wiener sample, not <em>W\u0303</em> &nbsp;·&nbsp; `;
+
+    document.getElementById('formula-display').innerHTML =
+        `<span style="color:#374151;">dX<sub>t</sub> =</span> ` +
+        `<span style="${driftSty}">κ<sup>ℙ</sup>(θ<sup>ℙ</sup> − X<sub>t</sub>)dt</span> + ` +
+        `<span style="${diffSty}">σ√X<sub>t</sub>&thinsp;d${wtFormula}</span><br>` +
+        `<span style="color:#374151;">dX<sub>t</sub> =</span> ` +
+        `<span style="${driftSty}">${kappa.toFixed(2)}(${theta.toFixed(3)} − X<sub>t</sub>)dt</span> + ` +
+        `<span style="${diffSty}">${sigma.toFixed(2)}√X<sub>t</sub>&thinsp;d${wtFormula}</span><br>` +
+        `<span style="color:#94a3b8;font-size:0.78rem;">${bmNote}Δ<em>W</em><sup>ℙ</sup> ~ N(0,Δt) | ` +
+        `X<sub>t+Δt</sub> = X<sub>t</sub> + drift·Δt + σ√X<sub>t</sub>·Δ<em>W</em><sup>ℙ</sup></span><br>` +
+        `<span style="color:#9f1239;font-size:0.78rem;">` +
+        `d<em>W</em><sub>t</sub><sup>ℚ</sup> = d<em>W</em><sub>t</sub><sup>ℙ</sup> + γ<sub>t</sub>&thinsp;dt &nbsp;·&nbsp; ` +
+        `<em>W\u0303</em><sub>t</sub> := <em>W</em><sub>t</sub><sup>ℙ</sup> + ∫γ&thinsp;ds (ℚ–BM, same <em>ω</em>) &nbsp;·&nbsp; ` +
+        `${pinkFoot}` +
+        `γ<sub>0</sub>(X<sub>0</sub>) ≈ ${g0.toFixed(4)} ` +
+        `<span style="opacity:0.85;">(κ<sup>ℚ</sup>=${kappaQ.toFixed(2)}, θ<sup>ℚ</sup>=${thetaQ.toFixed(3)})</span></span>`;
+    updateQMeasureHeader();
+}
+
+/* Many paths → one Plotly `lines` trace (null breaks between polylines); avoids trace-count limits. */
+function multiLineTrace(xs, yArrays) {
+    const x = [];
+    const y = [];
+    const m = xs.length;
+    for (let j = 0; j < yArrays.length; j++) {
+        const row = yArrays[j];
+        for (let i = 0; i < m; i++) {
+            x.push(xs[i]);
+            y.push(row[i]);
+        }
+        x.push(null);
+        y.push(null);
+    }
+    return { x, y };
+}
+
+/* ── Chart ──────────────────────────────────────────────────────── */
+function renderChart(ta, ta_full, W_full, W_q_full, Xcir, Xdrift, Xdiff, extras, extrasWQ) {
+    const showBM      = document.getElementById('chk-bm').checked;
+    const showDiff    = document.getElementById('chk-diff').checked;
+    const showDrift   = document.getElementById('chk-drift').checked;
+    const showSigWt   = document.getElementById('chk-sigwt').checked;
+    const showGamma   = document.getElementById('chk-gamma').checked;
+    const showBMq     = document.getElementById('chk-bm-q').checked;
+    const showSigWtq  = document.getElementById('chk-sigwt-q').checked;
+    const reweightView = document.getElementById('chk-wp-to-q').checked;
+    const { kappa: kP, theta: thP, sigma, kappaQ: kQ, thetaQ: thQ } = p;
+    const gammaPri    = gammaAlongX(Xcir, kP, thP, kQ, thQ, sigma);
+    const WqPri       = W_q_full;
+    const allOn       = showBM && showDiff && showDrift;
+    const nFan        = extras.length;
+    /* Opacity: keep faint fans readable for large K (single merged trace per layer). */
+    const alpha       = nFan > 0 ? Math.max(0.05, Math.min(0.42, 48 / nFan)) : 0;
+    const alphaQ      = alpha;
+
+    const traces = [];
+
+    /* ── K extra paths: one trace per layer (null-separated), not one trace per path ── */
+    if (nFan > 0) {
+        const kLabel = String(nFan);
+        if (showBM) {
+            const { x, y } = multiLineTrace(ta_full, extras.map(ex => ex.W_full));
+            traces.push({
+                x, y, mode: 'lines', showlegend: true,
+                name: `${kLabel} W_t^{\u2119} paths`,
+                line: { color: `rgba(39,174,96,${alpha})`, width: 1 },
+                hoverinfo: 'skip'
+            });
+        }
+        if (showDrift) {
+            const { x, y } = multiLineTrace(ta, extras.map(ex => ex.Xdrift));
+            traces.push({
+                x, y, mode: 'lines', showlegend: true,
+                name: `${kLabel} drift paths`,
+                line: { color: `rgba(8,145,178,${alpha})`, width: 1, dash: 'dash' },
+                hoverinfo: 'skip'
+            });
+        }
+        if (showDiff) {
+            const { x, y } = multiLineTrace(ta, extras.map(ex => ex.Xdiff));
+            traces.push({
+                x, y, mode: 'lines', showlegend: true,
+                name: `${kLabel} diffusion paths`,
+                line: { color: `rgba(217,119,6,${alpha})`, width: 1, dash: 'dot' },
+                hoverinfo: 'skip'
+            });
+        }
+        if (showSigWt) {
+            const { x, y } = multiLineTrace(ta_full, extras.map(ex => {
+                const out = new Float64Array(ex.W_full.length);
+                for (let i = 0; i < out.length; i++) out[i] = p.sigma * ex.W_full[i];
+                return out;
+            }));
+            traces.push({
+                x, y, mode: 'lines', showlegend: true,
+                name: `${kLabel} \u03c3\u00b7W^{\u2119} paths`,
+                line: { color: `rgba(192,38,211,${alpha})`, width: 1 },
+                hoverinfo: 'skip'
+            });
+        }
+        if (allOn) {
+            const { x, y } = multiLineTrace(ta, extras.map(ex => ex.Xcir));
+            traces.push({
+                x, y, mode: 'lines', showlegend: true,
+                name: `${kLabel} CIR paths`,
+                line: { color: `rgba(79,70,229,${alpha})`, width: 1 },
+                hoverinfo: 'skip'
+            });
+        }
+        if (showGamma) {
+            const gRows = extras.map(ex => gammaAlongX(ex.Xcir, kP, thP, kQ, thQ, sigma));
+            const { x, y } = multiLineTrace(ta, gRows);
+            traces.push({
+                x, y, yaxis: 'y2', mode: 'lines', showlegend: true,
+                name: `${kLabel} \u03b3_t paths (MPR)`,
+                line: { color: `rgba(225,29,72,${alphaQ})`, width: 1 },
+                hoverinfo: 'skip'
+            });
+        }
+        if (showBMq) {
+            const { x, y } = multiLineTrace(ta_full, extrasWQ);
+            traces.push({
+                x, y, mode: 'lines', showlegend: true,
+                name: reweightView
+                    ? `${kLabel} W_t^{\u2119} \u2192 \u211a (reweight label)`
+                    : `${kLabel} W_t^{\u211a} paths`,
+                line: { color: `rgba(236,72,153,${alphaQ})`, width: 1 },
+                hoverinfo: 'skip'
+            });
+        }
+        if (showSigWtq) {
+            const { x, y } = multiLineTrace(ta_full, extrasWQ.map(wq => {
+                const out = new Float64Array(wq.length);
+                for (let i = 0; i < out.length; i++) out[i] = p.sigma * wq[i];
+                return out;
+            }));
+            traces.push({
+                x, y, mode: 'lines', showlegend: true,
+                name: reweightView
+                    ? `${kLabel} \u03c3\u00b7W^{\u2119} \u2192 \u211a (reweight label)`
+                    : `${kLabel} \u03c3\u00b7W^{\u211a} paths`,
+                line: { color: `rgba(251,182,206,${alphaQ})`, width: 1 },
+                hoverinfo: 'skip'
+            });
+        }
+    }
+
+    /* ── Primary paths (drawn on top) ── */
+    if (allOn) {
+        traces.push({
+            x: ta, y: Array.from(Xcir),
+            mode: 'lines', name: 'Full CIR X\u209c (drift+diff)',
+            line: { color: '#4f46e5', width: 2.5 },
+            hovertemplate: 'Full CIR: %{y:.5f}<extra></extra>'
+        });
+    }
+    if (showDrift) {
+        traces.push({
+            x: ta, y: Array.from(Xdrift),
+            mode: 'lines', name: 'Drift only \u2014 \u03ba(\u03b8\u2212X\u209c)dt',
+            line: { color: '#0891b2', width: 2, dash: 'dash' },
+            hovertemplate: 'Drift only: %{y:.5f}<extra></extra>'
+        });
+    }
+    if (showDiff) {
+        /* EM diffusion-only path (X starts at X₀, evolves with diffusion only) */
+        traces.push({
+            x: ta, y: Array.from(Xdiff),
+            mode: 'lines', name: 'Diffusion only \u2014 \u03c3\u221aX\u209c dW^{\u2119}',
+            line: { color: '#d97706', width: 2, dash: 'dot' },
+            hovertemplate: 'Diffusion only: %{y:.5f}<extra></extra>'
+        });
+    }
+    if (showSigWt) {
+        const sigWt = Array.from(W_full).map(w => p.sigma * w);
+        traces.push({
+            x: ta_full, y: sigWt,
+            mode: 'lines', name: '\u03c3\u00b7W_t^{\u2119}',
+            line: { color: '#c026d3', width: 1.5 },
+            hovertemplate: '\u03c3\u00b7W^{\u2119}: %{y:.5f}<extra></extra>'
+        });
+    }
+    if (showBM) {
+        traces.push({
+            x: ta_full, y: Array.from(W_full),
+            mode: 'lines', name: 'W_t^{\u2119} \u2014 BM under \u2119',
+            line: { color: '#27ae60', width: 1.8 },
+            hovertemplate: 'W^{\u2119}: %{y:.5f}<extra></extra>'
+        });
+    }
+
+    if (showGamma) {
+        traces.push({
+            x: ta, y: Array.from(gammaPri),
+            yaxis: 'y2',
+            mode: 'lines', name: '\u03b3_t (MPR, along full CIR X)',
+            line: { color: '#e11d48', width: 2 },
+            hovertemplate: '\u03b3_t: %{y:.5f}<extra></extra>'
+        });
+    }
+    if (showBMq) {
+        traces.push({
+            x: ta_full, y: Array.from(WqPri),
+            mode: 'lines',
+            name: reweightView
+                ? 'W_t^{\u2119} \u2192 \u211a (same coordinate, reweighted measure)'
+                : 'W_t^{\u211a} \u2014 independent Wiener (ℚ law)',
+            line: { color: '#ec4899', width: 2 },
+            hovertemplate: reweightView
+                ? 'W^{\u2119}\u2192\u211a: %{y:.5f}<extra></extra>'
+                : 'W^{\u211a}: %{y:.5f}<extra></extra>'
+        });
+    }
+
+    if (showSigWtq) {
+        const y = Array.from(WqPri).map(w => p.sigma * w);
+        traces.push({
+            x: ta_full, y,
+            mode: 'lines',
+            name: reweightView
+                ? '\u03c3\u00b7W_t^{\u2119} \u2192 \u211a (reweight label)'
+                : '\u03c3\u00b7W_t^{\u211a}',
+            line: { color: '#f472b6', width: 1.6 },
+            hovertemplate: reweightView
+                ? '\u03c3\u00b7W^{\u2119}\u2192\u211a: %{y:.5f}<extra></extra>'
+                : '\u03c3\u00b7W^{\u211a}: %{y:.5f}<extra></extra>'
+        });
+    }
+
+    /* X₀ marker */
+    traces.push({
+        x: [0], y: [p.X0], mode: 'markers', name: `X\u2080 = ${p.X0.toFixed(3)}`,
+        marker: { color: '#16a34a', size: 10, symbol: 'diamond', line: { color: '#fff', width: 2 } },
+        hovertemplate: `X\u2080 = ${p.X0.toFixed(4)}<extra></extra>`
+    });
+
+    /* Lock y-range from ALL paths (γ uses right axis, not included here) */
+    if (!lockedYRange) {
+        const sigWtAll = Array.from(W_full).map(w => p.sigma * w);
+        let allY = [...Array.from(W_full), ...Array.from(Xcir),
+                    ...Array.from(Xdrift), ...Array.from(Xdiff), p.theta, p.X0];
+        if (showSigWt) {
+            allY = allY.concat(sigWtAll);
+        }
+        if (showBMq) {
+            allY = allY.concat(Array.from(WqPri));
+        }
+        if (showSigWtq) {
+            allY = allY.concat(Array.from(WqPri).map(w => p.sigma * w));
+        }
+        extras.forEach((ex, j) => {
+            const WqEx = extrasWQ[j];
+            if (showBM) {
+                allY = allY.concat(Array.from(ex.W_full));
+            }
+            allY = allY.concat(Array.from(ex.Xcir), Array.from(ex.Xdrift), Array.from(ex.Xdiff));
+            if (showSigWt) {
+                allY = allY.concat(Array.from(ex.W_full).map(w => p.sigma * w));
+            }
+            if (showBMq) {
+                allY = allY.concat(Array.from(WqEx));
+            }
+            if (showSigWtq) {
+                allY = allY.concat(Array.from(WqEx).map(w => p.sigma * w));
+            }
+        });
+        allY = allY.filter(v => isFinite(v));
+        const yMin = Math.min(...allY), yMax = Math.max(...allY);
+        const pad  = Math.max((yMax - yMin) * 0.12, 0.005);
+        lockedYRange = [yMin - pad, yMax + pad];
+    }
+
+    const showTheta = document.getElementById('chk-theta').checked;
+    const ySpan     = lockedYRange ? (lockedYRange[1] - lockedYRange[0]) : 0.2;
+    const bandHalf  = ySpan * 0.015;
+    const thetaShapes = showTheta ? [{
+        type: 'rect', xref: 'x', yref: 'y',
+        x0: 0, x1: p.T,
+        y0: p.theta - bandHalf, y1: p.theta + bandHalf,
+        fillcolor: 'rgba(250, 204, 21, 0.40)',
+        line: { width: 0 },
+        layer: 'below'
+    }] : [];
+    const thetaAnnotations = showTheta ? [{
+        x: p.T, y: p.theta, xanchor: 'right', yanchor: 'bottom',
+        text: `θ = ${p.theta.toFixed(3)}`,
+        showarrow: false,
+        font: { size: 11, color: '#92400e', family: 'monospace' },
+        bgcolor: 'rgba(250, 204, 21, 0.30)',
+        borderpad: 3
+    }] : [];
+
+    const marginR = showGamma ? 62 : CHART_MARGINS.r;
+    const layout = {
+        height: CHART_H,
+        margin: { ...CHART_MARGINS, r: marginR },
+        showlegend: true,
+        legend: { orientation: 'h', x: 0.5, xanchor: 'center',
+                  y: -0.05, yanchor: 'top', font: { size: 11 } },
+        xaxis: { title: 't', range: [0, p.T] },
+        yaxis: { title: 'Value', range: lockedYRange },
+        yaxis2: showGamma ? {
+            title: { text: 'γ_t' },
+            overlaying: 'y',
+            side: 'right',
+            showgrid: false,
+            zeroline: true,
+            zerolinecolor: '#fecaca'
+        } : { visible: false },
+        shapes: thetaShapes,
+        annotations: thetaAnnotations,
+        plot_bgcolor: '#fafbff', paper_bgcolor: 'white',
+        hovermode: 'x unified'
+    };
+
+    Plotly.react('path-chart', traces, layout, PC);
+}
+
+/* ── Build path bundle from driver W on the EM grid ───────────────── */
+function buildPathsFromDriver(W_f, dW, level) {
+    const { kappa, theta, sigma, X0, T } = p;
+    const N  = 1 << level;
+    const dt = T / N;
+    return {
+        W_full: W_f,
+        Xcir:   simulateCIR(kappa, theta, sigma, X0, dt, dW, N, true,  true),
+        Xdrift: simulateCIR(kappa, theta, sigma, X0, dt, dW, N, true,  false),
+        Xdiff:  simulateCIR(kappa, theta, sigma, X0, dt, dW, N, false, true),
+        dW
+    };
+}
+
+/* Primary ℙ path: Lévy–Ciesielski bridge (same as before). */
+function buildPaths(bridge, level) {
+    const dW  = bridgeDW(bridge, level);
+    const W_f = bridgeW(bridge, level);
+    return buildPathsFromDriver(W_f, dW, level);
+}
+
+/* K-fan extras: fast discrete BM + same EM CIR/drift/diff as primary logic. */
+function buildPathsFromDiscreteBMSeed(seed, level) {
+    const N   = 1 << level;
+    const T   = p.T;
+    const W_f = discreteBMOnGrid(seed, N, T);
+    const dW  = new Float64Array(N);
+    for (let i = 0; i < N; i++) dW[i] = W_f[i + 1] - W_f[i];
+    return buildPathsFromDriver(W_f, dW, level);
+}
+
+/* ── Stats panel ────────────────────────────────────────────────── */
+function updateStats(Xcir, W_full, N) {
+    const { kappa, theta, sigma, T } = p;
+    const twoKT = 2 * kappa * theta, sig2 = sigma * sigma;
+    document.getElementById('st-feller').innerHTML = twoKT > sig2
+        ? '<span class="feller-ok">✓ satisfied</span>'
+        : '<span class="feller-fail">✗ violated</span>';
+    document.getElementById('st-2kt').textContent   = twoKT.toFixed(5);
+    document.getElementById('st-sig2').textContent  = sig2.toFixed(5);
+    document.getElementById('st-EXT').textContent   = cirMean(T, kappa, theta, p.X0).toFixed(5);
+    document.getElementById('st-simXT').textContent = Xcir[N].toFixed(5);
+    document.getElementById('st-WT').textContent    = W_full[W_full.length - 1].toFixed(5);
+    document.getElementById('st-N').textContent     = N;
+}
+
+/* ── Master render ──────────────────────────────────────────────── */
+function render() {
+    if (!wBridge) wBridge = buildBridge(T_MAX, currentSeed);
+    if (!wBridgeQ) wBridgeQ = buildBridge(T_MAX, (currentSeed ^ SEED_Q_XOR) >>> 0);
+
+    const { level, T, K } = p;
+    const N      = 1 << level;
+    const dt     = T / N;
+    const ta     = Array.from({ length: N + 1 }, (_, i) => i * dt);
+
+    const primary  = buildPaths(wBridge, level);
+    const W_q_full = bridgeW(wBridgeQ, level);
+
+    const useCloud = kMode;
+    const extras     = [];
+    const extrasWQ   = [];
+    if (useCloud) {
+        for (let k = 1; k <= K; k++) {
+            const seedP = (currentSeed + k * 6271) & 0x7FFFFFFF;
+            extras.push(buildPathsFromDiscreteBMSeed(seedP, level));
+            const seedQ = (seedP ^ SEED_Q_EXTRA_XOR) >>> 0;
+            extrasWQ.push(discreteBMOnGrid(seedQ, N, T));
+        }
+    }
+
+    updateFormula();
+    renderChart(ta, ta, primary.W_full, W_q_full, primary.Xcir, primary.Xdrift, primary.Xdiff, extras, extrasWQ);
+    updateStats(primary.Xcir, primary.W_full, N);
+
+    document.getElementById('lbl-step-info').innerHTML =
+        `N = 2<sup>${level}</sup> = ${N} step${N === 1 ? '' : 's'} &nbsp;&middot;&nbsp; &Delta;t = ${dt.toFixed(4)}`;
+}
+
+/* Re-render chart only, no new bridges */
+function renderChartOnly() {
+    if (!wBridge || !wBridgeQ) { render(); return; }
+    const { level, T } = p;
+    const N      = 1 << level, dt = T / N;
+    const ta     = Array.from({ length: N + 1 }, (_, i) => i * dt);
+    const primary  = buildPaths(wBridge, level);
+    const W_q_full = bridgeW(wBridgeQ, level);
+    const useCloud = kMode;
+    const extras     = [];
+    const extrasWQ   = [];
+    if (useCloud) {
+        for (let k = 1; k <= p.K; k++) {
+            const seedP = (currentSeed + k * 6271) & 0x7FFFFFFF;
+            extras.push(buildPathsFromDiscreteBMSeed(seedP, level));
+            const seedQ = (seedP ^ SEED_Q_EXTRA_XOR) >>> 0;
+            extrasWQ.push(discreteBMOnGrid(seedQ, N, T));
+        }
+    }
+    updateFormula();
+    renderChart(ta, ta, primary.W_full, W_q_full, primary.Xcir, primary.Xdrift, primary.Xdiff, extras, extrasWQ);
+}
+
+/* ── Slider wiring ──────────────────────────────────────────────── */
+function bindSlider(id, lblId, key, dec) {
+    document.getElementById(id).addEventListener('input', function () {
+        p[key] = parseFloat(this.value);
+        document.getElementById(lblId).textContent = p[key].toFixed(dec);
+        lockedYRange = null;
+        render();
+    });
+}
+bindSlider('sl-kappa', 'lbl-kappa', 'kappa', 2);
+bindSlider('sl-theta', 'lbl-theta', 'theta', 3);
+bindSlider('sl-sigma', 'lbl-sigma', 'sigma', 2);
+bindSlider('sl-x0',   'lbl-x0',   'X0',    3);
+bindSlider('sl-kappaQ', 'lbl-kappaQ', 'kappaQ', 2);
+bindSlider('sl-thetaQ', 'lbl-thetaQ', 'thetaQ', 3);
+
+document.getElementById('sl-level').addEventListener('input', function () {
+    p.level = parseInt(this.value);
+    document.getElementById('lbl-level').textContent = p.level;
+    lockedYRange = null; render();
+});
+document.getElementById('sl-T').addEventListener('input', function () {
+    p.T = parseFloat(this.value);
+    document.getElementById('lbl-T').textContent = p.T.toFixed(1);
+    lockedYRange = null; render();  // bridge stays; we just reveal more/less of it
+});
+document.getElementById('sl-K').addEventListener('input', function () {
+    p.K = parseInt(this.value);
+    document.getElementById('lbl-K').textContent = p.K;
+    if (kMode) { lockedYRange = null; renderChartOnly(); }
+});
+
+/* ── Toggle listeners ───────────────────────────────────────────── */
+['chk-bm', 'chk-diff', 'chk-drift', 'chk-sigwt', 'chk-theta'].forEach(id => {
+    document.getElementById(id).addEventListener('change', renderChartOnly);
+});
+['chk-bm-q', 'chk-sigwt-q', 'chk-gamma'].forEach(id => {
+    document.getElementById(id).addEventListener('change', function () {
+        lockedYRange = null;
+        renderChartOnly();
+    });
+});
+document.getElementById('chk-wp-to-q').addEventListener('change', function () {
+    refreshTutorialBlurbIfManual();
+    renderChartOnly();
+});
+
+/* ── K paths button ─────────────────────────────────────────────── */
+document.getElementById('btn-kpaths').addEventListener('click', function () {
+    kMode = !kMode;
+    this.textContent  = kMode ? `\u00d7 Hide K paths` : 'Show K paths';
+    this.classList.toggle('btn-warning',      kMode);
+    this.classList.toggle('btn-outline-light', !kMode);
+    lockedYRange = null;
+    renderChartOnly();
+});
+
+/* ── Resimulate ─────────────────────────────────────────────────── */
+document.getElementById('btn-resim').addEventListener('click', function () {
+    currentSeed  = (Date.now() ^ (Math.random() * 0xFFFFFF)) & 0x7FFFFFFF;
+    wBridge      = null;
+    wBridgeQ     = null;
+    lockedYRange = null;
+    render();
+});
+
+/* ── Guided walkthrough buttons ─────────────────────────────────── */
+document.querySelectorAll('#tutorial-steps [data-tutorial]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        setTutorialStep(parseInt(btn.getAttribute('data-tutorial'), 10));
+    });
+});
+
+/* ── Boot ───────────────────────────────────────────────────────── */
+updateTutorialHighlight();
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CIR · change of measure (discrete) — Python</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <link rel="stylesheet" href="static/styles.css" />
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <span class="navbar-brand">CIR short rate · Girsanov density (discrete EM)</span>
+      <span class="navbar-text text-white-50 small">POST /api/simulate · see repo README</span>
+    </div>
+  </nav>
+
+  <div style="background: linear-gradient(135deg, #0f172a 0%, #4f46e5 100%); color: white; padding: 18px 0;">
+    <div class="container">
+      <h4 class="mb-1 fw-bold">Discrete CIR driver and change of measure</h4>
+      <p class="mb-0 opacity-75" style="font-size: 0.92rem;">
+        Under the physical measure <strong>ℙ</strong>, a Brownian motion <strong>W<sup>ℙ</sup></strong> drives the CIR short rate. The density <strong>Z<sub>T</sub></strong> (Doléans exponential in γ) tilts a Monte Carlo pool: green paths are a uniform subsample under ℙ; pink paths are a <strong>ℚ-weighted</strong> sample with probabilities <strong>q<sub>m</sub> ∝ Z<sub>T</sub><sup>(m)</sup></strong> (without replacement when <em>K</em> ≤ <em>M</em> so you see <em>K</em> distinct curves).
+      </p>
+    </div>
+  </div>
+
+  <div class="container-fluid py-3">
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="card mb-3">
+          <div class="card-header bg-light py-2"><span style="font-size: 0.88rem; font-weight: 600;">Model (notes-style)</span></div>
+          <div class="card-body p-3">
+            <div class="formula-box" id="formula-display">
+              <span class="text-muted small">Loading…</span>
+            </div>
+            <div id="sampling-explain" class="mt-3 small text-secondary" style="line-height:1.55; border-top:1px dashed #e2e8f0; padding-top:12px;"></div>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="card-header bg-primary text-white py-2">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <span style="font-size: 0.88rem; font-weight: 600;">Chart</span>
+              <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="form-check form-switch mb-0">
+                  <input class="form-check-input" type="checkbox" id="chk-bm" checked />
+                  <label class="form-check-label text-white chk-lbl" for="chk-bm"><span class="cdot cdot-bm"></span>W<sup>ℙ</sup></label>
+                </div>
+                <div class="form-check form-switch mb-0 border-start border-light border-opacity-50 ps-3">
+                  <input class="form-check-input" type="checkbox" id="chk-wp-to-q" />
+                  <label class="form-check-label text-white chk-lbl" for="chk-wp-to-q" style="font-size:0.8rem;"
+                    title="Requires Show K paths. Pink = K paths weighted ∝ Z_T^(m); without replacement when K≤M so you see K distinct curves. Same W^(m),P coordinates.">
+                    <span class="cdot" style="background:#f472b6;"></span>Pink: Cat(<em>q</em>) <span class="d-none d-md-inline">(∝<em>Z</em><sub>T</sub>)</span>
+                  </label>
+                </div>
+                <button id="btn-kpaths" class="btn btn-sm btn-outline-light fw-bold">Show K paths</button>
+                <button id="btn-resim" class="btn btn-sm btn-light text-primary fw-bold">⟳ New path</button>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-1"><div id="path-chart"></div></div>
+        </div>
+
+        <div class="card mb-3 border-success border-opacity-25">
+          <div class="card-header py-2 d-flex flex-wrap justify-content-between align-items-center gap-2" style="background: rgba(22, 163, 74, 0.08);">
+            <span style="font-size: 0.88rem; font-weight: 600;">Same 60 paths — opacity encodes mass</span>
+            <div class="form-check form-switch mb-0">
+              <input class="form-check-input" type="checkbox" id="chk-opacity-q" checked />
+              <label class="form-check-label small" for="chk-opacity-q" title="Off: equal stroke weight (visual ℙ on these 60). On: opacity map from q_m ∝ Z_T^(m).">
+                ℚ via <em>q</em><sub>m</sub> (else ℙ uniform)
+              </label>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <p class="small text-secondary px-3 pt-2 mb-0" style="line-height:1.5;">
+              <strong>Sixty</strong> fixed Brownian paths from the pool (first in simulation order). Toggle above:
+              <strong>ℙ</strong> — same opacity on every path (each has mass 1/60 on this sub-pool for display).
+              <strong>ℚ</strong> — stroke opacity reflects discrete weight <em>q</em><sub>m</sub> ∝ <em>Z</em><sub>T</sub><sup>(m)</sup> on the <em>full</em> pool, with a <strong>gentle</strong> scale so low-<em>q</em> paths stay visible (not linear in <em>q</em><sub>m</sub>).
+            </p>
+            <div id="path-chart-opacity" class="border-top" style="min-height: 400px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <div class="card mb-3">
+          <div class="card-header bg-dark text-white py-2"><strong>Parameters (ℙ)</strong></div>
+          <div class="card-body py-2 px-3 small text-muted" id="sliders-p">
+            If this panel stays blank, the page is not loading <code>static/app.js</code>. Use the backend URL
+            (e.g. <code>http://127.0.0.1:8765/</code> after <code>uvicorn</code>), not a <code>file://</code> open.
+          </div>
+        </div>
+        <div class="card mb-3">
+          <div class="card-header py-2" style="background: #fef2f2;"><strong>Parameters (ℚ)</strong></div>
+          <div class="card-body py-2 px-3 small text-muted" id="sliders-q">…</div>
+        </div>
+        <div class="card mb-3">
+          <div class="card-header bg-secondary text-white py-2"><strong>Simulation</strong></div>
+          <div class="card-body py-2 px-3 small text-muted" id="sliders-sim">…</div>
+        </div>
+        <div class="card mb-3">
+          <div class="card-header bg-light py-2"><strong>Stats</strong></div>
+          <div class="card-body py-2 px-3 small text-muted" id="stats-panel">Run simulation to populate.</div>
+        </div>
+        <div class="p-2 rounded small text-muted" id="lbl-step-info"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-dark text-white py-3 mt-4">
+    <div class="container text-center"><small class="text-muted">Python port · CIR via sdeint · MATH 60646A</small></div>
+  </footer>
+
+  <noscript>
+    <div class="container py-3"><p class="text-danger">Enable JavaScript. This UI needs JS for sliders and the chart.</p></div>
+  </noscript>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="static/app.js"></script>
+</body>
+</html>

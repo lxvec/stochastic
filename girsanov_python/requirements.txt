@@ -1,0 +1,7 @@
+# Install only after you approve (see README).
+# Core modelling: CIR via sdeint Euler–Maruyama (PyPI QuantLib lacks CoxIngersollRossProcess).
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+numpy>=1.24.0
+sdeint>=0.2.5

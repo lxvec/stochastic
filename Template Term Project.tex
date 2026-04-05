@@ -1,0 +1,121 @@
+\documentclass[compress]{beamer}
+
+%PACKAGE
+%----------------------------------
+\usepackage{graphicx} %Latex can not manage images by itself, so we need to use the graphicx package. 
+\graphicspath{{Images/}} %The command \graphicspath{ {./images/} } tells LaTeX that the images are kept in a folder named images under the directory of the main document.
+
+\usepackage{xcolor} %xcolor is a package which allows LaTeX users to paint the font or the background of their documents, thus adding vitality to their work.
+\newcommand{\rc}[1]{{\color{red}{#1}}}
+\newcommand{\bc}[1]{{\color{blue}{#1}}}
+
+\usepackage{amsmath, amssymb} %The principal package in the AMS-LaTeX distribution. It adapts for use in LaTeX most of the mathematical features found in AMS-TeX; it is highly recommended. amssymb Package. This package provides tons of math symbols, like arrows, operators, special characters, geometric figures etc.
+\usepackage{bm, bbm} %Access bold symbols in maths mode. The bm package defines a command \bm which makes its argument bold. Blackboard variants of Computer Modern fonts. 
+
+\usepackage{caption, subcaption} %The caption package provides many ways to customise the captions in floating environments like figure and table, and cooperates with many other packages.
+
+\usepackage{bibentry, natbib} %The bibentry package will work with natbib with its native \bibitem format, and with standard LATEX. When it comes to bibliography management in LaTeX, the package natbib is a package for customising citations 
+\usepackage{appendix} %The appendix package provides various ways of formatting the titles of appendices. 
+
+\usepackage{outlines} %The outlines package defines the outline environment, that al- lows outline-style indented lists with freely mixed levels up to four levels deep. It replaces the nested begin/end pairs by different item tags \1 to \4 for each nesting level.
+\usepackage{setspace} %Provides support for setting the spacing between lines in a document. Package options include singlespacing, onehalfspacing, and doublespacing.
+\usepackage{comment}
+\usepackage{multicol, multirow, array}
+\usepackage{tabu} %The package provides an environment, tabu, which will make any sort of tabular (that doesn?t need to split across pages), and an environment longtabu which provides the facilities of tabu in a modified longtable environment.
+\usepackage{algorithm2e, algorithmic}
+\usepackage{float}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage[flushleft]{threeparttable}
+
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks=true,
+	linkcolor=blue,
+	filecolor=blue,      
+	urlcolor=blue,
+	citecolor=black
+	%pdftitle={Overleaf Example},
+	%pdfpagemode=FullScreen,
+}
+
+\newcommand\MyBox[2]{
+	\fbox{\lower0.75cm
+		\vbox to 1.7cm{\vfil
+			\hbox to 1.7cm{\hfil\parbox{1.4cm}{#1\\#2}\hfil}
+			\vfil}%
+	}%
+}
+\usetheme{Frankfurt}
+\usecolortheme{seahorse}
+\setbeamertemplate{footline}[frame number]
+\setbeamertemplate{navigation symbols}{}
+\AtBeginSection[]{
+	\begin{frame}
+		\vfill
+		\centering
+		\begin{beamercolorbox}[sep=8pt,center,shadow=true,rounded=true]{title}
+			\usebeamerfont{title}\insertsectionhead\par%
+		\end{beamercolorbox}
+		\vfill
+	\end{frame}
+}
+
+%TITLE
+%-----
+\title[Template]{Titre complet}
+\author[Auteur]{\textbf {Auteur}} 
+\date{\today}
+
+
+\AtBeginSubsection[]
+{
+	\begin{frame}<beamer>{Outline}
+		\tableofcontents[currentsection,currentsubsection]
+	\end{frame}
+}
+
+% Let's get started
+
+%----------------------------------------------------------------
+
+\begin{document}
+	\bibliographystyle{apalike}
+	%\nobibliography{../../references}
+	
+	
+	\begin{frame}
+		\titlepage
+	\end{frame}
+	
+	{
+		\AtBeginSection{}
+	}
+	
+\section{Title}
+%----------------------
+
+\subsection{Mon sujet préféré}
+
+
+
+\begin{frame}{Slide title}
+	blablabla
+	\begin{align*}
+		dS_t &= \mu S_t dt + \sigma S_t dW_t\\
+		&= \left( r_t + \gamma_t \right) S_t dt + \sigma S_t dW_t\
+	\end{align*}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{Long set of slides}
+	blablabla
+\end{frame}
+
+\appendix
+
+\begin{comment}
+\end{comment}
+
+\end{document}
+
+
